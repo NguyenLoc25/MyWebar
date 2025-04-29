@@ -13,6 +13,34 @@
 <body>
 <script>
   window.onload = async () => {
+  const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+    container: document.body,
+    imageTargetSrc: './target.mind' // file marker của bạn
+  });
+  const {renderer, scene, camera} = mindarThree;
+
+  // Thêm ánh sáng vào cảnh
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  directionalLight.position.set(5, 5, 5);
+  scene.add(directionalLight);
+
+  const ambientLight = new THREE.AmbientLight(0x404040); // Ánh sáng mờ
+  scene.add(ambientLight);
+
+  const anchor = mindarThree.addAnchor(0);
+
+  // Sử dụng GLTFLoader của Three.js
+  const loader = new THREE.GLTFLoader();
+  loader.load('./Duck.glb', (gltf) => {
+    anchor.group.add(gltf.scene);
+  });
+
+  await mindarThree.start();
+  renderer.setAnimationLoop(() => {
+    renderer.render(scene, camera);
+  });
+};
+
     const mindarThree = new window.MINDAR.IMAGE.MindARThree({
       container: document.body,
       imageTargetSrc: './target.mind' // file marker của bạn
