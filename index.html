@@ -2,63 +2,233 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Simple WebAR with MindAR.js</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced WebAR with MindAR.js</title>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-three.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.138.3/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.138.3/examples/js/loaders/GLTFLoader.js"></script>
   <style>
-    body, html { margin: 0; overflow: hidden; width: 100%; height: 100%; }
+    body, html { 
+      margin: 0; 
+      padding: 0;
+      overflow: hidden; 
+      width: 100%; 
+      height: 100%; 
+      font-family: Arial, sans-serif;
+    }
+    
+    #loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    
+    #loading-bar {
+      width: 300px;
+      height: 20px;
+      border: 2px solid white;
+      margin-top: 20px;
+    }
+    
+    #loading-progress {
+      height: 100%;
+      width: 0%;
+      background: #4CAF50;
+    }
+    
+    #status-text {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+    
+    #ar-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    #ar-hint {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      font-size: 16px;
+    }
+    
+    #error-message {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 200;
+    }
+    
+    #error-message button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
+  <div id="loading-screen">
+    <h1>Loading AR Experience</h1>
+    <div id="loading-bar">
+      <div id="loading-progress"></div>
+    </div>
+    <div id="status-text">Initializing...</div>
+  </div>
+  
+  <div id="ar-container"></div>
+  
+  <div id="ar-hint">Point your camera at the target image</div>
+  
+  <div id="error-message">
+    <h2>Error Loading AR Experience</h2>
+    <p id="error-text"></p>
+    <button onclick="window.location.reload()">Try Again</button>
+  </div>
+
 <script>
   window.onload = async () => {
-  const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-    container: document.body,
-    imageTargetSrc: './target.mind' // file marker của bạn
-  });
-  const {renderer, scene, camera} = mindarThree;
-
-  // Thêm ánh sáng vào cảnh
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-  directionalLight.position.set(5, 5, 5);
-  scene.add(directionalLight);
-
-  const ambientLight = new THREE.AmbientLight(0x404040); // Ánh sáng mờ
-  scene.add(ambientLight);
-
-  const anchor = mindarThree.addAnchor(0);
-
-  // Sử dụng GLTFLoader của Three.js
-  const loader = new THREE.GLTFLoader();
-  loader.load('./Duck.glb', (gltf) => {
-    anchor.group.add(gltf.scene);
-  });
-
-  await mindarThree.start();
-  renderer.setAnimationLoop(() => {
-    renderer.render(scene, camera);
-  });
-};
-
-    const mindarThree = new window.MINDAR.IMAGE.MindARThree({
-      container: document.body,
-      imageTargetSrc: './target.mind' // file marker của bạn
-    });
-    const {renderer, scene, camera} = mindarThree;
-
-    const anchor = mindarThree.addAnchor(0);
-
-    // Sử dụng GLTFLoader của Three.js
-    const loader = new THREE.GLTFLoader();
-    loader.load('./Duck.glb', (gltf) => {
-      anchor.group.add(gltf.scene);
-    });
-
-    await mindarThree.start();
-    renderer.setAnimationLoop(() => {
-      renderer.render(scene, camera);
-    });
+    const loadingScreen = document.getElementById('loading-screen');
+    const loadingProgress = document.getElementById('loading-progress');
+    const statusText = document.getElementById('status-text');
+    const errorMessage = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+    const arHint = document.getElementById('ar-hint');
+    
+    const updateProgress = (progress, message) => {
+      loadingProgress.style.width = `${progress}%`;
+      statusText.textContent = message;
+    };
+    
+    try {
+      updateProgress(10, 'Loading AR engine...');
+      
+      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+        container: document.getElementById('ar-container'),
+        imageTargetSrc: './target.mind',
+        uiScanning: false,
+        uiLoading: 'no',
+        maxTrack: 2 // Số lượng mục tiêu có thể theo dõi cùng lúc
+      });
+      
+      const {renderer, scene, camera} = mindarThree;
+      
+      // Thêm ánh sáng cho scene
+      updateProgress(20, 'Setting up scene...');
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(0, 1, 0);
+      scene.add(directionalLight);
+      
+      // Tạo anchor cho mục tiêu
+      updateProgress(30, 'Setting up targets...');
+      const anchors = [];
+      
+      // Anchor chính (index 0)
+      const mainAnchor = mindarThree.addAnchor(0);
+      anchors.push(mainAnchor);
+      
+      // Có thể thêm anchor thứ 2 nếu cần (index 1)
+      // const secondAnchor = mindarThree.addAnchor(1);
+      // anchors.push(secondAnchor);
+      
+      updateProgress(40, 'Loading 3D models...');
+      const loader = new THREE.GLTFLoader();
+      
+      // Tải model 3D
+      loader.load(
+        './Duck.glb',
+        (gltf) => {
+          updateProgress(70, 'Setting up 3D model...');
+          
+          // Scale và position model
+          gltf.scene.scale.set(0.1, 0.1, 0.1);
+          gltf.scene.position.set(0, 0, 0);
+          gltf.scene.rotation.set(0, Math.PI, 0);
+          
+          // Thêm model vào anchor
+          mainAnchor.group.add(gltf.scene);
+          
+          // Animation loop
+          const clock = new THREE.Clock();
+          
+          updateProgress(90, 'Finalizing...');
+          mindarThree.start().then(() => {
+            renderer.setAnimationLoop(() => {
+              const delta = clock.getDelta();
+              
+              // Cập nhật animation nếu cần
+              if (gltf.animations && gltf.animations.length) {
+                mixer.update(delta);
+              }
+              
+              renderer.render(scene, camera);
+            });
+            
+            // Ẩn loading screen sau khi tải xong
+            setTimeout(() => {
+              loadingScreen.style.display = 'none';
+              arHint.style.display = 'block';
+            }, 500);
+          });
+        },
+        (xhr) => {
+          // Cập nhật progress bar khi tải model
+          const percent = 40 + (xhr.loaded / xhr.total * 30);
+          updateProgress(percent, 'Loading 3D model...');
+        },
+        (error) => {
+          showError(`Failed to load 3D model: ${error.message}`);
+        }
+      );
+      
+      // Xử lý sự kiện khi tìm thấy mục tiêu
+      mainAnchor.onTargetFound = () => {
+        arHint.style.display = 'none';
+      };
+      
+      mainAnchor.onTargetLost = () => {
+        arHint.style.display = 'block';
+      };
+      
+    } catch (error) {
+      showError(`Failed to initialize AR: ${error.message}`);
+    }
+    
+    function showError(message) {
+      loadingScreen.style.display = 'none';
+      errorText.textContent = message;
+      errorMessage.style.display = 'flex';
+    }
   };
 </script>
 </body>
