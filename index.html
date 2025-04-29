@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive WebAR with MindAR.js</title>
+  <title>Interactive WebAR with Touch Rotation</title>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.4/dist/mindar-image-three.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.138.3/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.138.3/examples/js/loaders/GLTFLoader.js"></script>
@@ -55,6 +55,7 @@
       width: 100%;
       height: 100%;
       position: relative;
+      overflow: hidden;
     }
     
     #ar-hint {
@@ -67,6 +68,7 @@
       background: rgba(0, 0, 0, 0.5);
       padding: 10px;
       font-size: 16px;
+      z-index: 10;
     }
     
     #error-message {
@@ -121,6 +123,18 @@
       padding: 10px;
       font-size: 14px;
       display: none;
+      z-index: 10;
+    }
+    
+    #debug {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      background: rgba(0,0,0,0.5);
+      padding: 10px;
+      z-index: 100;
+      display: none;
     }
   </style>
 </head>
@@ -143,6 +157,8 @@
     <input type="range" id="scale-slider" min="0.1" max="2" step="0.1" value="1">
   </div>
   
+  <div id="debug"></div>
+  
   <div id="error-message">
     <h2>Error Loading AR Experience</h2>
     <p id="error-text"></p>
@@ -154,9 +170,10 @@
   let currentScale = 1;
   let mixer = null;
   let isRotating = false;
-  let previousTouchX = 0;
-  let rotationSpeed = 0.01;
+  let previousPosition = 0;
+  let rotationSpeed = 0.02;
   let anchorGroup = null;
+  let mindarThree = null;
 
   window.onload = async () => {
     const loadingScreen = document.getElementById('loading-screen');
@@ -168,16 +185,23 @@
     const rotationHint = document.getElementById('rotation-hint');
     const scaleControls = document.getElementById('scale-controls');
     const scaleSlider = document.getElementById('scale-slider');
+    const debugDiv = document.getElementById('debug');
     
     const updateProgress = (progress, message) => {
       loadingProgress.style.width = `${progress}%`;
       statusText.textContent = message;
     };
     
+    const debugLog = (message) => {
+      debugDiv.innerHTML = message;
+      debugDiv.style.display = 'block';
+      setTimeout(() => { debugDiv.style.display = 'none'; }, 2000);
+    };
+    
     try {
       updateProgress(10, 'Loading AR engine...');
       
-      const mindarThree = new window.MINDAR.IMAGE.MindARThree({
+      mindarThree = new window.MINDAR.IMAGE.MindARThree({
         container: document.getElementById('ar-container'),
         imageTargetSrc: './target.mind',
         uiScanning: false,
@@ -201,6 +225,10 @@
       updateProgress(30, 'Setting up targets...');
       const mainAnchor = mindarThree.addAnchor(0);
       anchorGroup = mainAnchor.group;
+      
+      // Tạo một group con để xoay model độc lập
+      const modelGroup = new THREE.Group();
+      anchorGroup.add(modelGroup);
       
       updateProgress(40, 'Loading 3D models...');
       const loader = new THREE.GLTFLoader();
@@ -226,8 +254,8 @@
             action.play();
           }
           
-          // Thêm model vào anchor
-          anchorGroup.add(model);
+          // Thêm model vào group con
+          modelGroup.add(model);
           
           // Animation loop
           const clock = new THREE.Clock();
@@ -264,74 +292,82 @@
       
       // Xử lý sự kiện khi tìm thấy mục tiêu
       mainAnchor.onTargetFound = () => {
+        debugLog('Target found');
         arHint.style.display = 'none';
         rotationHint.style.display = 'block';
         scaleControls.style.display = 'block';
       };
       
       mainAnchor.onTargetLost = () => {
+        debugLog('Target lost');
         arHint.style.display = 'block';
         rotationHint.style.display = 'none';
         scaleControls.style.display = 'none';
       };
       
-      // Thêm sự kiện xoay bằng touch/mouse
+      // Thêm sự kiện xoay
       const container = document.getElementById('ar-container');
+      const canvas = renderer.domElement;
       
-      // Xử lý sự kiện cho touch devices
-      container.addEventListener('touchstart', (e) => {
-        if (model) {
-          isRotating = true;
-          previousTouchX = e.touches[0].clientX;
-          e.preventDefault();
-        }
-      }, {passive: false});
+      // Hàm xử lý bắt đầu xoay
+      const startRotate = (clientX) => {
+        if (!model) return;
+        isRotating = true;
+        previousPosition = clientX;
+        debugLog('Start rotating');
+      };
       
-      container.addEventListener('touchmove', (e) => {
-        if (isRotating && model) {
-          const touchX = e.touches[0].clientX;
-          const deltaX = touchX - previousTouchX;
-          anchorGroup.rotation.y += deltaX * rotationSpeed;
-          previousTouchX = touchX;
-          e.preventDefault();
-        }
-      }, {passive: false});
+      // Hàm xử lý xoay
+      const rotateModel = (clientX) => {
+        if (!isRotating || !model) return;
+        const deltaX = clientX - previousPosition;
+        modelGroup.rotation.y += deltaX * rotationSpeed;
+        previousPosition = clientX;
+        debugLog(`Rotating: ${modelGroup.rotation.y}`);
+      };
       
-      container.addEventListener('touchend', () => {
+      // Hàm kết thúc xoay
+      const endRotate = () => {
         isRotating = false;
-      });
+        debugLog('End rotating');
+      };
       
-      // Xử lý sự kiện cho mouse
-      container.addEventListener('mousedown', (e) => {
-        if (model) {
-          isRotating = true;
-          previousTouchX = e.clientX;
+      // Touch events
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          startRotate(e.touches[0].clientX);
           e.preventDefault();
         }
-      });
+      }, { passive: false });
       
-      container.addEventListener('mousemove', (e) => {
-        if (isRotating && model) {
-          const mouseX = e.clientX;
-          const deltaX = mouseX - previousTouchX;
-          anchorGroup.rotation.y += deltaX * rotationSpeed;
-          previousTouchX = mouseX;
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          rotateModel(e.touches[0].clientX);
           e.preventDefault();
         }
+      }, { passive: false });
+      
+      canvas.addEventListener('touchend', endRotate);
+      
+      // Mouse events
+      canvas.addEventListener('mousedown', (e) => {
+        startRotate(e.clientX);
+        e.preventDefault();
       });
       
-      container.addEventListener('mouseup', () => {
-        isRotating = false;
+      canvas.addEventListener('mousemove', (e) => {
+        rotateModel(e.clientX);
+        e.preventDefault();
       });
       
-      container.addEventListener('mouseleave', () => {
-        isRotating = false;
-      });
+      canvas.addEventListener('mouseup', endRotate);
+      canvas.addEventListener('mouseleave', endRotate);
       
       // Điều chỉnh kích thước bằng slider
       scaleSlider.addEventListener('input', (e) => {
         currentScale = parseFloat(e.target.value);
         if (model) model.scale.set(currentScale, currentScale, currentScale);
+        debugLog(`Scale: ${currentScale}`);
       });
       
     } catch (error) {
