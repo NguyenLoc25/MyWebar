@@ -96,25 +96,23 @@
       cursor: pointer;
     }
     
-    #scale-controls {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 10px;
-      border-radius: 5px;
-      color: white;
-      z-index: 50;
-    }
-    
-    #scale-slider {
-      width: 150px;
-      margin-top: 5px;
-    }
-    
     #rotation-hint {
       position: absolute;
       bottom: 70px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      font-size: 14px;
+      display: none;
+      z-index: 10;
+    }
+    
+    #zoom-hint {
+      position: absolute;
+      bottom: 120px;
       left: 0;
       right: 0;
       text-align: center;
@@ -150,12 +148,8 @@
   <div id="ar-container"></div>
   
   <div id="ar-hint">Point your camera at the target image</div>
-  <div id="rotation-hint">Touch and drag to rotate the model</div>
-  
-  <div id="scale-controls" style="display: none;">
-    <label for="scale-slider">Model Scale:</label>
-    <input type="range" id="scale-slider" min="0.1" max="2" step="0.1" value="1">
-  </div>
+  <div id="rotation-hint">Touch and drag with one finger to rotate</div>
+  <div id="zoom-hint">Pinch with two fingers to zoom</div>
   
   <div id="debug"></div>
   
@@ -167,12 +161,16 @@
 
 <script>
   let model = null;
-  let currentScale = 1;
+  let currentScale = 0.2;
   let mixer = null;
   let isRotating = false;
+  let isZooming = false;
   let previousPosition = 0;
+  let initialDistance = 0;
+  let initialScale = 0;
   let rotationSpeed = 0.02;
   let anchorGroup = null;
+  let modelGroup = null;
   let mindarThree = null;
 
   window.onload = async () => {
@@ -183,8 +181,7 @@
     const errorText = document.getElementById('error-text');
     const arHint = document.getElementById('ar-hint');
     const rotationHint = document.getElementById('rotation-hint');
-    const scaleControls = document.getElementById('scale-controls');
-    const scaleSlider = document.getElementById('scale-slider');
+    const zoomHint = document.getElementById('zoom-hint');
     const debugDiv = document.getElementById('debug');
     
     const updateProgress = (progress, message) => {
@@ -227,7 +224,7 @@
       anchorGroup = mainAnchor.group;
       
       // Tạo một group con để xoay model độc lập
-      const modelGroup = new THREE.Group();
+      modelGroup = new THREE.Group();
       anchorGroup.add(modelGroup);
       
       updateProgress(40, 'Loading 3D models...');
@@ -242,7 +239,6 @@
           model = gltf.scene;
           
           // Scale và position model ban đầu
-          currentScale = 0.2;
           model.scale.set(currentScale, currentScale, currentScale);
           model.position.set(0, 0, 0);
           model.rotation.set(0, Math.PI, 0);
@@ -295,19 +291,26 @@
         debugLog('Target found');
         arHint.style.display = 'none';
         rotationHint.style.display = 'block';
-        scaleControls.style.display = 'block';
+        zoomHint.style.display = 'block';
       };
       
       mainAnchor.onTargetLost = () => {
         debugLog('Target lost');
         arHint.style.display = 'block';
         rotationHint.style.display = 'none';
-        scaleControls.style.display = 'none';
+        zoomHint.style.display = 'none';
       };
       
-      // Thêm sự kiện xoay
+      // Thêm sự kiện xoay và zoom
       const container = document.getElementById('ar-container');
       const canvas = renderer.domElement;
+      
+      // Hàm tính khoảng cách giữa 2 điểm chạm
+      const getTouchDistance = (touch1, touch2) => {
+        const dx = touch1.clientX - touch2.clientX;
+        const dy = touch1.clientY - touch2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      };
       
       // Hàm xử lý bắt đầu xoay
       const startRotate = (clientX) => {
@@ -326,10 +329,34 @@
         debugLog(`Rotating: ${modelGroup.rotation.y}`);
       };
       
-      // Hàm kết thúc xoay
-      const endRotate = () => {
+      // Hàm xử lý bắt đầu zoom
+      const startZoom = (touch1, touch2) => {
+        if (!model) return;
+        isZooming = true;
+        initialDistance = getTouchDistance(touch1, touch2);
+        initialScale = currentScale;
+        debugLog('Start zooming');
+      };
+      
+      // Hàm xử lý zoom
+      const zoomModel = (touch1, touch2) => {
+        if (!isZooming || !model) return;
+        const currentDistance = getTouchDistance(touch1, touch2);
+        const scaleFactor = currentDistance / initialDistance;
+        currentScale = initialScale * scaleFactor;
+        
+        // Giới hạn scale trong khoảng 0.1 đến 2
+        currentScale = Math.max(0.1, Math.min(2, currentScale));
+        
+        model.scale.set(currentScale, currentScale, currentScale);
+        debugLog(`Zooming: ${currentScale}`);
+      };
+      
+      // Hàm kết thúc tương tác
+      const endInteraction = () => {
         isRotating = false;
-        debugLog('End rotating');
+        isZooming = false;
+        debugLog('End interaction');
       };
       
       // Touch events
@@ -337,38 +364,55 @@
         if (e.touches.length === 1) {
           startRotate(e.touches[0].clientX);
           e.preventDefault();
-        }
-      }, { passive: false });
-      
-      canvas.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1) {
-          rotateModel(e.touches[0].clientX);
+        } else if (e.touches.length === 2) {
+          startZoom(e.touches[0], e.touches[1]);
           e.preventDefault();
         }
       }, { passive: false });
       
-      canvas.addEventListener('touchend', endRotate);
+      canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && isRotating) {
+          rotateModel(e.touches[0].clientX);
+          e.preventDefault();
+        } else if (e.touches.length === 2 && isZooming) {
+          zoomModel(e.touches[0], e.touches[1]);
+          e.preventDefault();
+        }
+      }, { passive: false });
       
-      // Mouse events
+      canvas.addEventListener('touchend', endInteraction);
+      canvas.addEventListener('touchcancel', endInteraction);
+      
+      // Mouse events (cho desktop)
       canvas.addEventListener('mousedown', (e) => {
         startRotate(e.clientX);
         e.preventDefault();
       });
       
       canvas.addEventListener('mousemove', (e) => {
-        rotateModel(e.clientX);
+        if (isRotating) {
+          rotateModel(e.clientX);
+          e.preventDefault();
+        }
+      });
+      
+      canvas.addEventListener('mouseup', endInteraction);
+      canvas.addEventListener('mouseleave', endInteraction);
+      
+      // Thêm sự kiện wheel để zoom bằng chuột (cho desktop)
+      canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
-      });
-      
-      canvas.addEventListener('mouseup', endRotate);
-      canvas.addEventListener('mouseleave', endRotate);
-      
-      // Điều chỉnh kích thước bằng slider
-      scaleSlider.addEventListener('input', (e) => {
-        currentScale = parseFloat(e.target.value);
-        if (model) model.scale.set(currentScale, currentScale, currentScale);
-        debugLog(`Scale: ${currentScale}`);
-      });
+        if (!model) return;
+        
+        const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+        currentScale *= zoomFactor;
+        
+        // Giới hạn scale trong khoảng 0.1 đến 2
+        currentScale = Math.max(0.1, Math.min(2, currentScale));
+        
+        model.scale.set(currentScale, currentScale, currentScale);
+        debugLog(`Mouse wheel zoom: ${currentScale}`);
+      }, { passive: false });
       
     } catch (error) {
       showError(`Failed to initialize AR: ${error.message}`);
