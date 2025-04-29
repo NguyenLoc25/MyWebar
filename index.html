@@ -92,6 +92,47 @@
       border-radius: 5px;
       cursor: pointer;
     }
+    
+    #controls {
+      position: absolute;
+      bottom: 70px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      z-index: 50;
+    }
+    
+    .control-btn {
+      padding: 10px 15px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .control-btn:hover {
+      background: rgba(76, 175, 80, 0.7);
+    }
+    
+    #scale-controls {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px;
+      border-radius: 5px;
+      color: white;
+      z-index: 50;
+    }
+    
+    #scale-slider {
+      width: 150px;
+      margin-top: 5px;
+    }
   </style>
 </head>
 <body>
@@ -107,6 +148,17 @@
   
   <div id="ar-hint">Point your camera at the target image</div>
   
+  <div id="controls" style="display: none;">
+    <button class="control-btn" id="rotate-left">↻ Rotate Left</button>
+    <button class="control-btn" id="rotate-right">↺ Rotate Right</button>
+    <button class="control-btn" id="reset-rotation">Reset Rotation</button>
+  </div>
+  
+  <div id="scale-controls" style="display: none;">
+    <label for="scale-slider">Model Scale:</label>
+    <input type="range" id="scale-slider" min="0.1" max="2" step="0.1" value="1">
+  </div>
+  
   <div id="error-message">
     <h2>Error Loading AR Experience</h2>
     <p id="error-text"></p>
@@ -114,6 +166,11 @@
   </div>
 
 <script>
+  let model = null;
+  let currentRotation = 0;
+  let currentScale = 1;
+  let mixer = null;
+
   window.onload = async () => {
     const loadingScreen = document.getElementById('loading-screen');
     const loadingProgress = document.getElementById('loading-progress');
@@ -121,6 +178,13 @@
     const errorMessage = document.getElementById('error-message');
     const errorText = document.getElementById('error-text');
     const arHint = document.getElementById('ar-hint');
+    const controls = document.getElementById('controls');
+    const scaleControls = document.getElementById('scale-controls');
+    
+    const rotateLeftBtn = document.getElementById('rotate-left');
+    const rotateRightBtn = document.getElementById('rotate-right');
+    const resetRotationBtn = document.getElementById('reset-rotation');
+    const scaleSlider = document.getElementById('scale-slider');
     
     const updateProgress = (progress, message) => {
       loadingProgress.style.width = `${progress}%`;
@@ -135,7 +199,8 @@
         imageTargetSrc: './target.mind',
         uiScanning: false,
         uiLoading: 'no',
-        maxTrack: 2 // Số lượng mục tiêu có thể theo dõi cùng lúc
+        maxTrack: 2,
+        targetSize: 0.5 // Tăng kích thước target (giá trị mặc định là 0.2)
       });
       
       const {renderer, scene, camera} = mindarThree;
@@ -151,15 +216,7 @@
       
       // Tạo anchor cho mục tiêu
       updateProgress(30, 'Setting up targets...');
-      const anchors = [];
-      
-      // Anchor chính (index 0)
       const mainAnchor = mindarThree.addAnchor(0);
-      anchors.push(mainAnchor);
-      
-      // Có thể thêm anchor thứ 2 nếu cần (index 1)
-      // const secondAnchor = mindarThree.addAnchor(1);
-      // anchors.push(secondAnchor);
       
       updateProgress(40, 'Loading 3D models...');
       const loader = new THREE.GLTFLoader();
@@ -170,13 +227,23 @@
         (gltf) => {
           updateProgress(70, 'Setting up 3D model...');
           
-          // Scale và position model
-          gltf.scene.scale.set(0.1, 0.1, 0.1);
-          gltf.scene.position.set(0, 0, 0);
-          gltf.scene.rotation.set(0, Math.PI, 0);
+          model = gltf.scene;
+          
+          // Scale và position model ban đầu
+          currentScale = 0.2;
+          model.scale.set(currentScale, currentScale, currentScale);
+          model.position.set(0, 0, 0);
+          model.rotation.set(0, Math.PI, 0);
+          
+          // Thiết lập animation mixer nếu có animation
+          if (gltf.animations && gltf.animations.length) {
+            mixer = new THREE.AnimationMixer(model);
+            const action = mixer.clipAction(gltf.animations[0]);
+            action.play();
+          }
           
           // Thêm model vào anchor
-          mainAnchor.group.add(gltf.scene);
+          mainAnchor.group.add(model);
           
           // Animation loop
           const clock = new THREE.Clock();
@@ -187,7 +254,7 @@
               const delta = clock.getDelta();
               
               // Cập nhật animation nếu cần
-              if (gltf.animations && gltf.animations.length) {
+              if (mixer) {
                 mixer.update(delta);
               }
               
@@ -214,11 +281,36 @@
       // Xử lý sự kiện khi tìm thấy mục tiêu
       mainAnchor.onTargetFound = () => {
         arHint.style.display = 'none';
+        controls.style.display = 'flex';
+        scaleControls.style.display = 'block';
       };
       
       mainAnchor.onTargetLost = () => {
         arHint.style.display = 'block';
+        controls.style.display = 'none';
+        scaleControls.style.display = 'none';
       };
+      
+      // Thêm sự kiện cho các nút điều khiển
+      rotateLeftBtn.addEventListener('click', () => {
+        currentRotation += Math.PI / 8;
+        if (model) model.rotation.y = currentRotation;
+      });
+      
+      rotateRightBtn.addEventListener('click', () => {
+        currentRotation -= Math.PI / 8;
+        if (model) model.rotation.y = currentRotation;
+      });
+      
+      resetRotationBtn.addEventListener('click', () => {
+        currentRotation = Math.PI;
+        if (model) model.rotation.y = currentRotation;
+      });
+      
+      scaleSlider.addEventListener('input', (e) => {
+        currentScale = parseFloat(e.target.value);
+        if (model) model.scale.set(currentScale, currentScale, currentScale);
+      });
       
     } catch (error) {
       showError(`Failed to initialize AR: ${error.message}`);
