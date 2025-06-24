@@ -4,83 +4,132 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AR Video Player</title>
-  <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <!-- AR.js for A-Frame -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
     .error-message {
       position: fixed;
       top: 10px;
       left: 10px;
+      right: 10px;
       background: rgba(255,0,0,0.7);
       color: white;
       padding: 10px;
       border-radius: 5px;
       z-index: 10000;
+      text-align: center;
       display: none;
+    }
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      background: rgba(0,0,0,0.7);
+      padding: 20px;
+      border-radius: 5px;
+      z-index: 10000;
     }
   </style>
 </head>
 <body style='margin: 0px; overflow: hidden;'>
   <div id="error" class="error-message"></div>
+  <div id="loading">Đang tải ứng dụng AR...</div>
   
-  <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;' renderer="logarithmicDepthBuffer: true;">
-    <!-- Preload video asset -->
+  <a-scene vr-mode-ui="enabled: false" embedded arjs='sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3;' renderer="logarithmicDepthBuffer: true; precision: medium;">
     <a-assets>
-      <video id="videoTexture" autoplay loop muted crossorigin="anonymous" 
-             src="/Hydro.mp4" webkit-playsinline playsinline></video>
+      <!-- Video với nhiều định dạng dự phòng -->
+      <video id="videoTexture" autoplay loop muted playsinline webkit-playsinline crossorigin="anonymous">
+        <source src="Hydro.mp4" type="video/mp4">
+        <source src="Hydro.webm" type="video/webm">
+        Trình duyệt của bạn không hỗ trợ video HTML5.
+      </video>
+      <!-- Hình ảnh dự phòng nếu video không hoạt động -->
+      <img id="fallbackImage" src="fallback.jpg" alt="Fallback Image">
     </a-assets>
-    
-    <!-- Marker và nội dung AR -->
-    <a-marker type="pattern" url="pattern-hydro.patt">
-      <!-- Khối lập phương nằm ngay tại gốc (position 0 0 0) -->
-      <a-box position="0 0 0" width="1" height="1" depth="1">
-        <a-material shader="flat">
-          <a-video-material src="#videoTexture"></a-video-material>
-        </a-material>
+
+    <a-marker type="pattern" url="pattern-hydro.patt" emitevents="true">
+      <!-- Khối lập phương chính -->
+      <a-box position="0 0 0" width="1" height="1" depth="1" material="shader: flat; src: #videoTexture">
+        <!-- Nội dung dự phòng nếu video không tải -->
+        <a-plane position="0 0 0.51" width="1" height="1" material="src: #fallbackImage" visible="false"></a-plane>
       </a-box>
     </a-marker>
-    
-    <!-- Camera -->
+
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
-    // Hiển thị lỗi
+    // Hiển thị thông báo lỗi chi tiết
     function showError(message) {
       const errorDiv = document.getElementById('error');
-      errorDiv.textContent = message;
+      errorDiv.innerHTML = message + 
+        '<br><br>Vui lòng:<br>' +
+        '- Kiểm tra kết nối internet<br>' +
+        '- Đảm bảo file Hydro.mp4 tồn tại<br>' +
+        '- Cho phép sử dụng webcam<br>' +
+        '- Thử trên trình duyệt Chrome/Firefox mới nhất';
       errorDiv.style.display = 'block';
       console.error(message);
-      alert(message); // Hiển thị cả popup
     }
 
+    // Ẩn loading khi scene đã sẵn sàng
+    document.querySelector('a-scene').addEventListener('loaded', function() {
+      document.getElementById('loading').style.display = 'none';
+    });
+
     // Kiểm tra khi tải trang
-    document.addEventListener('DOMContentLoaded', () => {
-      // Kiểm tra video
+    window.addEventListener('load', function() {
       const video = document.querySelector('#videoTexture');
+      const fallbackImage = document.querySelector('[material="src: #fallbackImage"]');
       
-      video.onerror = () => {
-        showError('Không thể tải video. Kiểm tra đường dẫn Hydro.mp4');
-      };
-      
-      // Kiểm tra marker
-      const marker = document.querySelector('a-marker');
-      if (!marker) {
-        showError('Không tìm thấy marker pattern');
+      // Kiểm tra hỗ trợ video
+      if (!video.canPlayType) {
+        showError('Trình duyệt không hỗ trợ phát video');
+        activateFallback();
+        return;
       }
 
-      // Bắt sự kiện marker
-      marker.addEventListener('markerFound', () => {
-        video.play().catch(e => {
-          showError('Không thể phát video: ' + e.message);
-        });
-      });
+      // Xử lý sự kiện video
+      video.onerror = function() {
+        showError('Không thể tải video. Đang kích hoạt hình ảnh dự phòng...');
+        activateFallback();
+      };
       
-      marker.addEventListener('markerLost', () => {
-        video.pause();
-      });
+      video.oncanplay = function() {
+        console.log('Video đã sẵn sàng để phát');
+      };
+
+      // Kích hoạt hình ảnh dự phòng
+      function activateFallback() {
+        const box = document.querySelector('a-box');
+        if (box) {
+          box.setAttribute('material', 'src', '#fallbackImage');
+          fallbackImage.setAttribute('visible', 'true');
+        }
+      }
+
+      // Xử lý sự kiện marker
+      const marker = document.querySelector('a-marker');
+      if (marker) {
+        marker.addEventListener('markerFound', function() {
+          video.play().catch(function(e) {
+            showError('Không thể tự động phát video: ' + e.message);
+            // Trên mobile, cần tương tác người dùng trước khi phát
+            document.body.addEventListener('click', function once() {
+              video.play().catch(e => console.log('Vẫn không thể phát:', e));
+              document.body.removeEventListener('click', once);
+            });
+          });
+        });
+
+        marker.addEventListener('markerLost', function() {
+          video.pause();
+        });
+      } else {
+        showError('Lỗi hệ thống AR: Không tìm thấy thành phần marker');
+      }
     });
   </script>
 </body>
