@@ -15,45 +15,62 @@
       position: fixed;
       top: 10px;
       left: 10px;
+      right: 10px;
       background: rgba(255,0,0,0.7);
       color: white;
       padding: 10px;
       border-radius: 5px;
       z-index: 10000;
       display: none;
+      text-align: center;
     }
     #playButton {
       position: absolute;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 10px 20px;
+      padding: 12px 24px;
       background: #4285f4;
       color: white;
       border: none;
-      border-radius: 20px;
+      border-radius: 25px;
       font-size: 16px;
+      font-weight: bold;
       z-index: 10000;
       display: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    #playButton:active {
+      transform: translateX(-50%) scale(0.95);
+    }
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 18px;
+      z-index: 10000;
     }
   </style>
 </head>
 <body style='margin: 0px; overflow: hidden;'>
   <div id="error" class="error-message"></div>
-  <button id="playButton">Tap to Play Video</button>
+  <div id="loading" class="loading">Loading AR experience...</div>
+  <button id="playButton">TAP TO PLAY VIDEO</button>
   
-  <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;' renderer="logarithmicDepthBuffer: true;">
+  <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;' renderer="logarithmicDepthBuffer: true;" vr-mode-ui="enabled: false">
     <!-- Preload video asset -->
     <a-assets>
       <video id="videoTexture" autoplay loop muted playsinline webkit-playsinline
              crossorigin="anonymous" preload="auto"
-             src="https://yourdomain.com/path/Hydro_fixed.mp4"></video>
+             src="https://your-actual-video-url.com/Hydro_fixed.mp4"></video>
     </a-assets>
     
-    <a-marker type="pattern" url="pattern-hydro.patt">
-      <a-box position="0 0 0" width="1" height="1" depth="1"
-             material="shader: flat; src: #videoTexture">
-      </a-box>
+    <a-marker type="pattern" url="pattern-hydro.patt" emitevents="true">
+      <a-plane position="0 0 0" width="1.6" height="0.9" 
+               material="shader: flat; src: #videoTexture" rotation="-90 0 0">
+      </a-plane>
     </a-marker>
     
     <!-- Camera -->
@@ -61,6 +78,12 @@
   </a-scene>
 
   <script>
+    // Show loading status
+    function showLoading(message) {
+      const loadingDiv = document.getElementById('loading');
+      loadingDiv.textContent = message;
+    }
+
     // Show error message
     function showError(message) {
       const errorDiv = document.getElementById('error');
@@ -71,25 +94,26 @@
 
     // Check when page loads
     document.addEventListener('DOMContentLoaded', () => {
-
-    // Required fallback for iOS: Wait for user interaction
-  document.body.addEventListener('click', () => {
-    video.play().catch(err => {
-      console.error('Playback failed:', err);
-      alert('⚠️ Video playback failed: ' + err.message);
-    });
-  }, { once: true }); // only run once
       const video = document.querySelector('#videoTexture');
       const playButton = document.getElementById('playButton');
+      const loadingDiv = document.getElementById('loading');
       
-      // iOS detection
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      // Better iOS detection
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
       
+      // Check for WebXR/AR support
+      if (!navigator.xr) {
+        showError('AR not supported in your browser. Try Chrome on Android or Safari on iOS.');
+        return;
+      }
+
+      // Video error handling
       video.onerror = () => {
         if (isIOS) {
-          showError('iOS video error: Ensure HTTPS and proper encoding');
+          showError('iOS video error: Ensure HTTPS and proper encoding (H.264)');
         } else {
-          showError('Video load error');
+          showError('Video load error. Check URL and format (MP4/H.264 recommended)');
         }
       };
       
@@ -98,6 +122,11 @@
       if (!marker) {
         showError('Marker pattern not found');
       }
+
+      // Hide loading when scene is ready
+      document.querySelector('a-scene').addEventListener('loaded', () => {
+        loadingDiv.style.display = 'none';
+      });
 
       // Marker events
       marker.addEventListener('markerFound', () => {
@@ -117,7 +146,10 @@
       // Manual play button for iOS
       playButton.addEventListener('click', () => {
         video.play()
-          .then(() => playButton.style.display = 'none')
+          .then(() => {
+            playButton.style.display = 'none';
+            video.currentTime = 0; // Reset to start
+          })
           .catch(e => showError('Still cannot play: ' + e.message));
       });
       
@@ -126,6 +158,14 @@
         video.play().catch(e => console.log('Autoplay prevented:', e));
       }
     });
+
+    // Required fallback for iOS: Wait for user interaction
+    document.body.addEventListener('click', () => {
+      const video = document.querySelector('#videoTexture');
+      video.play().catch(err => {
+        console.error('Playback failed:', err);
+      });
+    }, { once: true }); // only run once
   </script>
 </body>
 </html>
