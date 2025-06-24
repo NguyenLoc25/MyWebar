@@ -71,6 +71,14 @@
 
     // Check when page loads
     document.addEventListener('DOMContentLoaded', () => {
+
+    // Required fallback for iOS: Wait for user interaction
+  document.body.addEventListener('click', () => {
+    video.play().catch(err => {
+      console.error('Playback failed:', err);
+      alert('⚠️ Video playback failed: ' + err.message);
+    });
+  }, { once: true }); // only run once
       const video = document.querySelector('#videoTexture');
       const playButton = document.getElementById('playButton');
       
