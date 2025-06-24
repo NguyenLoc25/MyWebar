@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>AR Video Player</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
@@ -20,16 +22,32 @@
       z-index: 10000;
       display: none;
     }
+    #playButton {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 16px;
+      z-index: 10000;
+      display: none;
+    }
   </style>
 </head>
 <body style='margin: 0px; overflow: hidden;'>
   <div id="error" class="error-message"></div>
+  <button id="playButton">Tap to Play Video</button>
   
   <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;' renderer="logarithmicDepthBuffer: true;">
     <!-- Preload video asset -->
     <a-assets>
-      <video id="videoTexture" autoplay loop muted crossorigin="anonymous"
-             src="/assest/Hydro.mp4" webkit-playsinline playsinline></video>
+      <video id="videoTexture" autoplay loop muted playsinline webkit-playsinline
+             crossorigin="anonymous" preload="auto"
+             src="https://yourdomain.com/path/Hydro_fixed.mp4"></video>
     </a-assets>
     
     <a-marker type="pattern" url="pattern-hydro.patt">
@@ -43,40 +61,62 @@
   </a-scene>
 
   <script>
-    // Hiển thị lỗi
+    // Show error message
     function showError(message) {
       const errorDiv = document.getElementById('error');
       errorDiv.textContent = message;
       errorDiv.style.display = 'block';
       console.error(message);
-      alert(message); // Hiển thị cả popup
     }
 
-    // Kiểm tra khi tải trang
+    // Check when page loads
     document.addEventListener('DOMContentLoaded', () => {
-      // Kiểm tra video
       const video = document.querySelector('#videoTexture');
+      const playButton = document.getElementById('playButton');
+      
+      // iOS detection
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       
       video.onerror = () => {
-        showError('Không thể tải video. Kiểm tra đường dẫn Hydro.mp4');
+        if (isIOS) {
+          showError('iOS video error: Ensure HTTPS and proper encoding');
+        } else {
+          showError('Video load error');
+        }
       };
       
-      // Kiểm tra marker
+      // Check marker
       const marker = document.querySelector('a-marker');
       if (!marker) {
-        showError('Không tìm thấy marker pattern');
+        showError('Marker pattern not found');
       }
 
-      // Bắt sự kiện marker
+      // Marker events
       marker.addEventListener('markerFound', () => {
         video.play().catch(e => {
-          showError('Không thể phát video: ' + e.message);
+          if (isIOS) {
+            playButton.style.display = 'block'; // Show manual play button
+          }
+          showError('Video play failed: ' + e.message);
         });
       });
       
       marker.addEventListener('markerLost', () => {
         video.pause();
+        playButton.style.display = 'none';
       });
+      
+      // Manual play button for iOS
+      playButton.addEventListener('click', () => {
+        video.play()
+          .then(() => playButton.style.display = 'none')
+          .catch(e => showError('Still cannot play: ' + e.message));
+      });
+      
+      // Initial play attempt for non-iOS
+      if (!isIOS) {
+        video.play().catch(e => console.log('Autoplay prevented:', e));
+      }
     });
   </script>
 </body>
