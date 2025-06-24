@@ -10,28 +10,33 @@
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 </head>
 <body style='margin: 0px; overflow: hidden;'>
-  <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;'>
+  <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;' renderer="logarithmicDepthBuffer: true;">
     <!-- Preload video asset -->
     <a-assets>
-      <video id="videoTexture" autoplay loop crossorigin="anonymous" 
+      <video id="videoTexture" autoplay loop muted crossorigin="anonymous" 
              src="Hydro.mp4" webkit-playsinline playsinline></video>
     </a-assets>
     
-    <!-- 3D object with video texture -->
-    <a-marker type="pattern" url="pattern-hydro.patt">
-      <!-- You can use any 3D shape here - I'm using a box as example -->
-      <a-box position="0 0.5 0" width="1" height="0.5" depth="1">
-        <a-material shader="flat" src="#videoTexture"></a-material>
-      </a-box>
-      
-      <!-- Alternative: Plane with video texture (better for video display) -->
-      <a-plane position="0 0.5 0" width="1" height="0.56" rotation="-90 0 0" visible="false">
-        <a-material shader="flat" src="#videoTexture"></a-material>
+    <!-- Marker và nội dung AR -->
+    <a-marker type="pattern" url="pattern-hydro.patt" emitevents="true" cursor="rayOrigin: mouse">
+      <!-- Plane với video texture (hiển thị tốt hơn) -->
+      <a-plane position="0 0.5 0" width="1.78" height="1" rotation="-90 0 0">
+        <a-material shader="flat">
+          <a-video-material src="#videoTexture"></a-video-material>
+        </a-material>
       </a-plane>
     </a-marker>
     
     <!-- Camera -->
     <a-entity camera></a-entity>
   </a-scene>
+
+  <script>
+    // Đảm bảo video bắt đầu phát khi marker được nhận diện
+    document.querySelector('a-marker').addEventListener('markerFound', () => {
+      const video = document.querySelector('#videoTexture');
+      video.play().catch(e => console.log("Video play failed:", e));
+    });
+  </script>
 </body>
 </html>
