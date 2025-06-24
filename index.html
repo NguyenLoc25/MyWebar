@@ -3,27 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Example</title>
+  <title>AR Video Example</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <!-- AR.js for A-Frame (updated version) -->
+  <!-- AR.js for A-Frame -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 </head>
-<body style='margin : 0px; overflow: hidden;'>
+<body style='margin: 0px; overflow: hidden;'>
   <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;'>
-    <!-- define your gltf asset - replace with actual path -->
+    <!-- Preload video asset -->
     <a-assets>
-      <a-asset-item id="tree" src="assets/models/tree.gltf"></a-asset-item>
+      <video id="videoTexture" autoplay loop crossorigin="anonymous" 
+             src="Hydro.mp4" webkit-playsinline playsinline></video>
     </a-assets>
     
-    <!-- use your gltf model - corrected reference -->
-    <a-entity gltf-model="#tree"></a-entity>
+    <!-- 3D object with video texture -->
+    <a-marker type="pattern" url="pattern-hydro.patt">
+      <!-- You can use any 3D shape here - I'm using a box as example -->
+      <a-box position="0 0.5 0" width="1" height="0.5" depth="1">
+        <a-material shader="flat" src="#videoTexture"></a-material>
+      </a-box>
+      
+      <!-- Alternative: Plane with video texture (better for video display) -->
+      <a-plane position="0 0.5 0" width="1" height="0.56" rotation="-90 0 0" visible="false">
+        <a-material shader="flat" src="#videoTexture"></a-material>
+      </a-plane>
+    </a-marker>
     
-    <!-- create your content here. just a box for now -->
-    <a-box position='0 0.5 0' material='opacity: 0.5;'></a-box>
-
-    <!-- define a camera which will move according to the marker position -->
-    <a-marker-camera type='pattern' url='pattern-hydro.patt'></a-marker-camera>
+    <!-- Camera -->
+    <a-entity camera></a-entity>
   </a-scene>
 </body>
 </html>
