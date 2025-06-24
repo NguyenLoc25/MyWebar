@@ -3,13 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Video Example</title>
+  <title>AR Video Player</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <style>
+    .error-message {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,0,0,0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 10000;
+      display: none;
+    }
+  </style>
 </head>
 <body style='margin: 0px; overflow: hidden;'>
+  <div id="error" class="error-message"></div>
+  
   <a-scene embedded arjs='detectionMode: mono_and_matrix; matrixCodeType: 3x3;' renderer="logarithmicDepthBuffer: true;">
     <!-- Preload video asset -->
     <a-assets>
@@ -18,13 +33,13 @@
     </a-assets>
     
     <!-- Marker và nội dung AR -->
-    <a-marker type="pattern" url="pattern-hydro.patt" emitevents="true" cursor="rayOrigin: mouse">
-      <!-- Plane với video texture (hiển thị tốt hơn) -->
-      <a-plane position="0 0.5 0" width="1.78" height="1" rotation="-90 0 0">
+    <a-marker type="pattern" url="pattern-hydro.patt">
+      <!-- Khối lập phương nằm ngay tại gốc (position 0 0 0) -->
+      <a-box position="0 0 0" width="1" height="1" depth="1">
         <a-material shader="flat">
           <a-video-material src="#videoTexture"></a-video-material>
         </a-material>
-      </a-plane>
+      </a-box>
     </a-marker>
     
     <!-- Camera -->
@@ -32,10 +47,40 @@
   </a-scene>
 
   <script>
-    // Đảm bảo video bắt đầu phát khi marker được nhận diện
-    document.querySelector('a-marker').addEventListener('markerFound', () => {
+    // Hiển thị lỗi
+    function showError(message) {
+      const errorDiv = document.getElementById('error');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      console.error(message);
+      alert(message); // Hiển thị cả popup
+    }
+
+    // Kiểm tra khi tải trang
+    document.addEventListener('DOMContentLoaded', () => {
+      // Kiểm tra video
       const video = document.querySelector('#videoTexture');
-      video.play().catch(e => console.log("Video play failed:", e));
+      
+      video.onerror = () => {
+        showError('Không thể tải video. Kiểm tra đường dẫn Hydro.mp4');
+      };
+      
+      // Kiểm tra marker
+      const marker = document.querySelector('a-marker');
+      if (!marker) {
+        showError('Không tìm thấy marker pattern');
+      }
+
+      // Bắt sự kiện marker
+      marker.addEventListener('markerFound', () => {
+        video.play().catch(e => {
+          showError('Không thể phát video: ' + e.message);
+        });
+      });
+      
+      marker.addEventListener('markerLost', () => {
+        video.pause();
+      });
     });
   </script>
 </body>
