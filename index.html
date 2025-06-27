@@ -23,11 +23,17 @@
     a-scene {
       width: 100vw;
       height: 100vh;
+      overflow: hidden;
     }
     /* Thêm blur effect khi mất focus */
     .blur-effect {
       filter: blur(2px);
       transition: filter 0.3s ease;
+    }
+    /* Ẩn nội dung ngoài QR code */
+    .hide-outside {
+      overflow: hidden;
+      clip-path: inset(0 0 0 0);
     }
   </style>
 </head>
@@ -60,30 +66,30 @@
     <!-- Static Path - Tập trung ở giữa QR code -->
     <a-entity id="pathEntity" visible="false" position="0 0 0">
       <!-- Path lines -->
-      <a-entity line="start: -0.8 0 0; end: -0.4 0.2 0; color: #118AFF"></a-entity>
-      <a-entity line="start: -0.4 0.2 0; end: 0 -0.1 0; color: #118AFF"></a-entity>
-      <a-entity line="start: 0 -0.1 0; end: 0.4 0.3 0; color: #118AFF"></a-entity>
+      <a-entity line="start: -0.3 0 0; end: -0.15 0.1 0; color: #118AFF"></a-entity>
+      <a-entity line="start: -0.15 0.1 0; end: 0 -0.05 0; color: #118AFF"></a-entity>
+      <a-entity line="start: 0 -0.05 0; end: 0.15 0.15 0; color: #118AFF"></a-entity>
       
       <!-- Path markers/dots -->
-      <a-sphere position="-0.8 0 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="-0.4 0.2 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="0 -0.1 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="0.4 0.3 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="-0.3 0 0" radius="0.015" color="#FF3E96"></a-sphere>
+      <a-sphere position="-0.15 0.1 0" radius="0.015" color="#FF3E96"></a-sphere>
+      <a-sphere position="0 -0.05 0" radius="0.015" color="#FF3E96"></a-sphere>
+      <a-sphere position="0.15 0.15 0" radius="0.015" color="#FF3E96"></a-sphere>
       
       <!-- Path labels -->
-      <a-entity text="value: Start; align: center; color: white" position="-0.8 0.2 0" scale="0.5 0.5 0.5"></a-entity>
-      <a-entity text="value: Step 1; align: center; color: white" position="-0.4 0.4 0" scale="0.5 0.5 0.5"></a-entity>
-      <a-entity text="value: Step 2; align: center; color: white" position="0 -0.3 0" scale="0.5 0.5 0.5"></a-entity>
-      <a-entity text="value: End; align: center; color: white" position="0.4 0.5 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: Start; align: center; color: white" position="-0.3 0.1 0" scale="0.3 0.3 0.3"></a-entity>
+      <a-entity text="value: Step 1; align: center; color: white" position="-0.15 0.2 0" scale="0.3 0.3 0.3"></a-entity>
+      <a-entity text="value: Step 2; align: center; color: white" position="0 -0.15 0" scale="0.3 0.3 0.3"></a-entity>
+      <a-entity text="value: End; align: center; color: white" position="0.15 0.25 0" scale="0.3 0.3 0.3"></a-entity>
 
       <!-- Video Box (inside pathEntity) -->
-      <a-entity id="videoEntity" position="-0.8 0.5 0" visible="false">
+      <a-entity id="videoEntity" position="0 0.2 0" visible="false">
         <a-box 
           position="0 0 0" 
-          width="0.6" 
-          height="0.35" 
+          width="0.4" 
+          height="0.25" 
           depth="0.01"
-          rotation="-90 15 -15"
+          rotation="-90 0 0"
           material="shader: flat; src: #videoTexture">
         </a-box>
       </a-entity>
@@ -94,7 +100,7 @@
       type="pattern" 
       url="/pattern-hydro.patt" 
       emitevents="true"
-      preset="hiro">
+      raycaster="objects: a-box, a-sphere, a-entity">
     </a-marker-camera>
   </a-scene>
 
@@ -112,16 +118,16 @@
       isAnimating: false,
       isReversing: false,
       steps: [
-        { position: "-0.8 0.5 0", delay: 0, duration: 1000 },    // Start
-        { position: "-0.4 0.7 0", delay: 0, duration: 1000 },    // Step 1
-        { position: "0 0.4 0", delay: 0, duration: 1000 },       // Step 2
-        { position: "0.4 0.8 0", delay: 1000, duration: 1000 }   // End
+        { position: "0 0.2 0", delay: 0, duration: 1000 },    // Start
+        { position: "0.1 0.3 0", delay: 0, duration: 1000 },  // Step 1
+        { position: "0 0.1 0", delay: 0, duration: 1000 },    // Step 2
+        { position: "0.2 0.4 0", delay: 1000, duration: 1000 }   // End
       ],
       reverseSteps: [
-        { position: "0.4 0.8 0", delay: 0, duration: 1000 },    // End
-        { position: "0 0.4 0", delay: 0, duration: 1000 },      // Step 2
-        { position: "-0.4 0.7 0", delay: 0, duration: 1000 },   // Step 1
-        { position: "-0.8 0.5 0", delay: 1000, duration: 1000 } // Start
+        { position: "0.2 0.4 0", delay: 0, duration: 1000 },  // End
+        { position: "0 0.1 0", delay: 0, duration: 1000 },     // Step 2
+        { position: "0.1 0.3 0", delay: 0, duration: 1000 },  // Step 1
+        { position: "0 0.2 0", delay: 1000, duration: 1000 }  // Start
       ]
     };
 
@@ -242,22 +248,30 @@
       // Cải thiện FOV bằng cách điều chỉnh camera parameters
       const camera = document.querySelector('[camera]');
       if (camera) {
-        camera.setAttribute('camera', 'fov', 60); // Giảm FOV để giảm biến dạng
+        camera.setAttribute('camera', 'fov', 50); // Giảm FOV để giảm biến dạng
+        camera.setAttribute('camera', 'near', 0.01); // Điều chỉnh near plane
+        camera.setAttribute('camera', 'far', 100); // Điều chỉnh far plane
       }
       
+      // Điều chỉnh kích thước video dựa trên hướng thiết bị
       function adjustVideoSize() {
         const videoBox = document.querySelector('a-box');
         if (window.innerHeight > window.innerWidth) {
-          videoBox.setAttribute('width', '0.5');
-          videoBox.setAttribute('height', '0.3');
+          // Chế độ dọc
+          videoBox.setAttribute('width', '0.35');
+          videoBox.setAttribute('height', '0.2');
         } else {
-          videoBox.setAttribute('width', '0.7');
-          videoBox.setAttribute('height', '0.4');
+          // Chế độ ngang
+          videoBox.setAttribute('width', '0.4');
+          videoBox.setAttribute('height', '0.25');
         }
       }
       
       window.addEventListener('resize', adjustVideoSize);
       adjustVideoSize();
+      
+      // Thêm lớp hide-outside để ẩn nội dung ngoài QR code
+      scene.classList.add('hide-outside');
     });
   </script>
 </body>
