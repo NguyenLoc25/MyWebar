@@ -86,29 +86,29 @@
 
     <!-- Centered Path -->
     <a-entity id="pathEntity" visible="false" position="0 0 0">
-      <!-- Path lines - made thicker -->
-      <a-entity line="start: -0.5 0 0; end: -0.25 0.2 0; color: #118AFF" line__thickness="0.02"></a-entity>
-      <a-entity line="start: -0.25 0.2 0; end: 0 -0.1 0; color: #118AFF" line__thickness="0.02"></a-entity>
-      <a-entity line="start: 0 -0.1 0; end: 0.25 0.3 0; color: #118AFF" line__thickness="0.02"></a-entity>
+      <!-- Path lines -->
+      <a-entity line="start: -0.3 0 0; end: -0.15 0.1 0; color: #118AFF"></a-entity>
+      <a-entity line="start: -0.15 0.1 0; end: 0 -0.05 0; color: #118AFF"></a-entity>
+      <a-entity line="start: 0 -0.05 0; end: 0.15 0.15 0; color: #118AFF"></a-entity>
       
-      <!-- Path markers/dots - made larger -->
-      <a-sphere position="-0.5 0 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="-0.25 0.2 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="0 -0.1 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="0.25 0.3 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <!-- Path markers/dots -->
+      <a-sphere position="-0.3 0 0" radius="0.015" color="#FF3E96"></a-sphere>
+      <a-sphere position="-0.15 0.1 0" radius="0.015" color="#FF3E96"></a-sphere>
+      <a-sphere position="0 -0.05 0" radius="0.015" color="#FF3E96"></a-sphere>
+      <a-sphere position="0.15 0.15 0" radius="0.015" color="#FF3E96"></a-sphere>
       
-      <!-- Path labels - made larger -->
-      <a-entity text="value: Start; align: center; color: white" position="-0.5 0.15 0" scale="1 1 1"></a-entity>
-      <a-entity text="value: Step 1; align: center; color: white" position="-0.25 0.35 0" scale="1 1 1"></a-entity>
-      <a-entity text="value: Step 2; align: center; color: white" position="0 -0.25 0" scale="1 1 1"></a-entity>
-      <a-entity text="value: End; align: center; color: white" position="0.25 0.45 0" scale="1 1 1"></a-entity>
+      <!-- Path labels -->
+      <a-entity text="value: Start; align: center; color: white" position="-0.3 0.1 0" scale="0.3 0.3 0.3"></a-entity>
+      <a-entity text="value: Step 1; align: center; color: white" position="-0.15 0.2 0" scale="0.3 0.3 0.3"></a-entity>
+      <a-entity text="value: Step 2; align: center; color: white" position="0 -0.15 0" scale="0.3 0.3 0.3"></a-entity>
+      <a-entity text="value: End; align: center; color: white" position="0.15 0.25 0" scale="0.3 0.3 0.3"></a-entity>
 
-      <!-- Centered Video Box - made larger -->
-      <a-entity id="videoEntity" position="0 0.3 0" visible="false">
+      <!-- Centered Video Box -->
+      <a-entity id="videoEntity" position="0 0.2 0" visible="false">
         <a-box 
           position="0 0 0" 
-          width="1.2" 
-          height="0.675" 
+          width="0.4" 
+          height="0.25" 
           depth="0.01"
           rotation="-90 0 0"
           material="shader: flat; src: #videoTexture">
@@ -133,22 +133,22 @@
     const focusBtn = document.getElementById('focusBtn');
     const scene = document.querySelector('a-scene');
     
-    // Animation configuration with centered positions - adjusted for larger size
+    // Animation configuration with centered positions
     let animationState = {
       currentStep: 0,
       isAnimating: false,
       isReversing: false,
       steps: [
-        { position: "0 0.3 0", delay: 0, duration: 1000 },    // Start (centered)
-        { position: "0.15 0.45 0", delay: 0, duration: 1000 },   // Step 1 (slightly right)
-        { position: "-0.15 0.15 0", delay: 0, duration: 1000 },  // Step 2 (slightly left)
-        { position: "0 0.6 0", delay: 1000, duration: 1000 }   // End (centered up)
+        { position: "0 0.2 0", delay: 0, duration: 1000 },    // Start (centered)
+        { position: "0.1 0.3 0", delay: 0, duration: 1000 },   // Step 1 (slightly right)
+        { position: "-0.1 0.1 0", delay: 0, duration: 1000 },  // Step 2 (slightly left)
+        { position: "0 0.4 0", delay: 1000, duration: 1000 }   // End (centered up)
       ],
       reverseSteps: [
-        { position: "0 0.6 0", delay: 0, duration: 1000 },    // End
-        { position: "-0.15 0.15 0", delay: 0, duration: 1000 }, // Step 2
-        { position: "0.15 0.45 0", delay: 0, duration: 1000 },  // Step 1
-        { position: "0 0.3 0", delay: 1000, duration: 1000 }  // Start
+        { position: "0 0.4 0", delay: 0, duration: 1000 },    // End
+        { position: "-0.1 0.1 0", delay: 0, duration: 1000 }, // Step 2
+        { position: "0.1 0.3 0", delay: 0, duration: 1000 },  // Step 1
+        { position: "0 0.2 0", delay: 1000, duration: 1000 }  // Start
       ]
     };
 
@@ -245,7 +245,7 @@
         
         // Reset positions to center
         path.setAttribute('position', '0 0 0');
-        videoEntity.setAttribute('position', '0 0.3 0');
+        videoEntity.setAttribute('position', '0 0.2 0');
         
         scene.classList.remove('blur-effect');
         
@@ -280,12 +280,12 @@
         if (videoBox) {
           if (window.innerHeight > window.innerWidth) {
             // Portrait mode
-            videoBox.setAttribute('width', '0.5');
-            videoBox.setAttribute('height', '0.3');
+            videoBox.setAttribute('width', '0.35');
+            videoBox.setAttribute('height', '0.2');
           } else {
             // Landscape mode
-            videoBox.setAttribute('width', '0.6');
-            videoBox.setAttribute('height', '0.35');
+            videoBox.setAttribute('width', '0.4');
+            videoBox.setAttribute('height', '0.25');
           }
         }
       }
