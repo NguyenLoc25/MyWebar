@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>AR Video Player with Static Path</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>AR Video Player with Looping Path</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
@@ -20,97 +20,175 @@
       z-index: 10000;
       display: none;
     }
+    a-scene {
+      width: 100vw;
+      height: 100vh;
+    }
   </style>
 </head>
 <body style="margin: 0px; overflow: hidden;">
   <div id="error" class="error-message"></div>
 
-  <a-scene embedded arjs="detectionMode: mono" renderer="logarithmicDepthBuffer: true;">
+  <a-scene embedded arjs="detectionMode: mono; debugUIEnabled: false;" renderer="logarithmicDepthBuffer: true;">
     <!-- Preload video -->
     <a-assets>
       <video id="videoTexture" autoplay loop muted crossorigin="anonymous"
-             src="/asset/Hydro_v2.mp4" webkit-playsinline playsinline></video>
+             src="./asset/Hydro_v2.mp4" webkit-playsinline playsinline></video>
     </a-assets>
 
-    <!-- Hộp video -->
-    <a-entity id="videoEntity" position="0.5 0.5 0" visible="false">
-      <a-box 
-        position="0 0.75 0" 
-        width="1.25" 
-        height="0.75" 
-        depth="0.01"
-        rotation="-90 15 -15"
-        material="shader: flat; src: #videoTexture">
-      </a-box>
-    </a-entity>
+    <!-- Static Path - Bắt đầu từ trung tâm bên trái -->
+    <a-entity id="pathEntity" visible="false" position="-0.8 0 0">
+      <!-- Path lines -->
+      <a-entity line="start: 0 0 0; end: 0.6 0.2 0; color: #118AFF"></a-entity>
+      <a-entity line="start: 0.6 0.2 0; end: 1.2 -0.1 0; color: #118AFF"></a-entity>
+      <a-entity line="start: 1.2 -0.1 0; end: 1.8 0.3 0; color: #118AFF"></a-entity>
+      
+      <!-- Path markers/dots -->
+      <a-sphere position="0 0 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="0.6 0.2 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="1.2 -0.1 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="1.8 0.3 0" radius="0.03" color="#FF3E96"></a-sphere>
+      
+      <!-- Path labels -->
+      <a-entity text="value: Start; align: center; color: white" position="0 0.2 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: Step 1; align: center; color: white" position="0.6 0.4 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: Step 2; align: center; color: white" position="1.2 -0.3 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: End; align: center; color: white" position="1.8 0.5 0" scale="0.5 0.5 0.5"></a-entity>
 
-    <!-- Đường dẫn tĩnh không màu -->
-    <a-entity id="pathEntity">
-      <!-- Cột nghiêng (ẩn màu) -->
-      <a-entity id="slopeContainer">
-        <a-cylinder
-          id="slope"
-          radius="0.03"
-          height="1"
-          position="0 0.5 0" 
-          rotation="0 0 -30"
-          material="transparent: true; opacity: 0;">
-        </a-cylinder>
-      </a-entity>
-
-      <!-- Cột ngang (ẩn màu) -->
-      <a-entity id="horizontalContainer">
-        <a-cylinder
-          id="horizontal"
-          radius="0.03"
-          height="1"
-          position="0.86 1 0" 
-          rotation="0 0 90"
-          material="transparent: true; opacity: 0;">
-        </a-cylinder>
+      <!-- Video Box (inside pathEntity) -->
+      <a-entity id="videoEntity" position="0 0.5 0" visible="false">
+        <a-box 
+          position="0 0 0" 
+          width="0.6" 
+          height="0.35" 
+          depth="0.01"
+          rotation="-90 15 -15"
+          material="shader: flat; src: #videoTexture">
+        </a-box>
       </a-entity>
     </a-entity>
 
     <!-- Marker camera -->
-    <a-marker-camera type="pattern" url="pattern-hydro.patt"></a-marker-camera>
+    <a-marker-camera type="pattern" url="./pattern-hydro.patt" emitevents="true"></a-marker-camera>
   </a-scene>
 
   <script>
     const errorDiv = document.getElementById('error');
     const video = document.querySelector('#videoTexture');
-    const entity = document.querySelector('#videoEntity');
+    const videoEntity = document.querySelector('#videoEntity');
     const path = document.querySelector('#pathEntity');
+    
+    // Animation state với thời gian ngắn hơn và chế độ lặp
+    let animationState = {
+      currentStep: 0,
+      isAnimating: false,
+      isReversing: false,
+      steps: [
+        { position: "0 0.5 0", delay: 0, duration: 1000 },      // Start
+        { position: "0.6 0.7 0", delay: 0, duration: 1000 },    // Step 1
+        { position: "1.2 0.4 0", delay: 0, duration: 1000 },    // Step 2
+        { position: "1.8 0.8 0", delay: 1000, duration: 1000 }  // End
+      ],
+      reverseSteps: [
+        { position: "1.8 0.8 0", delay: 0, duration: 1000 },    // End
+        { position: "1.2 0.4 0", delay: 0, duration: 1000 },    // Step 2
+        { position: "0.6 0.7 0", delay: 0, duration: 1000 },    // Step 1
+        { position: "0 0.5 0", delay: 1000, duration: 1000 }    // Start
+      ]
+    };
 
     function showError(message) {
       errorDiv.textContent = message;
       errorDiv.style.display = 'block';
       console.error(message);
-      alert(message);
+    }
+
+    function startAnimation() {
+      if (animationState.isAnimating) return;
+      
+      animationState.isAnimating = true;
+      animationState.currentStep = 0;
+      animationState.isReversing = false;
+      moveToNextStep();
+    }
+
+    function moveToNextStep() {
+      const steps = animationState.isReversing ? animationState.reverseSteps : animationState.steps;
+      
+      if (animationState.currentStep >= steps.length) {
+        // Đảo chiều animation khi hoàn thành một chu kỳ
+        animationState.isReversing = !animationState.isReversing;
+        animationState.currentStep = 0;
+        
+        // Nếu muốn dừng sau một số lần lặp, có thể thêm điều kiện ở đây
+      }
+      
+      const stepConfig = steps[animationState.currentStep];
+      
+      setTimeout(() => {
+        videoEntity.setAttribute('animation', {
+          property: 'position',
+          to: stepConfig.position,
+          dur: stepConfig.duration,
+          easing: 'easeInOutQuad'
+        });
+        
+        animationState.currentStep++;
+        
+        // Tiếp tục animation
+        setTimeout(moveToNextStep, stepConfig.duration + stepConfig.delay);
+      }, stepConfig.delay);
+    }
+
+    function resetAnimation() {
+      videoEntity.removeAttribute('animation');
+      videoEntity.setAttribute('position', animationState.steps[0].position);
+      animationState.currentStep = 0;
+      animationState.isAnimating = false;
+      animationState.isReversing = false;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       if (!video) {
-        showError('Không thể tìm thấy thẻ video');
+        showError('Video element not found');
         return;
       }
 
-      // Khi marker được phát hiện
-      document.querySelector('a-marker-camera').addEventListener('markerFound', () => {
-        video.play().catch(e => showError('Không thể phát video: ' + e.message));
+      const marker = document.querySelector('a-marker-camera');
+      
+      marker.addEventListener('markerFound', () => {
+        video.play().catch(e => showError('Video play error: ' + e.message));
         path.setAttribute('visible', true);
-        entity.setAttribute('visible', true);
+        videoEntity.setAttribute('visible', true);
+        
+        if (!animationState.isAnimating) {
+          resetAnimation();
+          startAnimation();
+        }
       });
 
-      // Khi mất marker
-      document.querySelector('a-marker-camera').addEventListener('markerLost', () => {
-        video.pause();
-        entity.setAttribute('visible', false);
+      marker.addEventListener('markerLost', () => {
+        videoEntity.setAttribute('visible', false);
         path.setAttribute('visible', false);
       });
 
       video.onerror = () => {
-        showError('Không thể tải video. Kiểm tra đường dẫn /asset/Hydro_v2.mp4');
+        showError('Video load error. Check path: ./asset/Hydro_v2.mp4');
       };
+      
+      function adjustVideoSize() {
+        const videoBox = document.querySelector('a-box');
+        if (window.innerHeight > window.innerWidth) {
+          videoBox.setAttribute('width', '0.5');
+          videoBox.setAttribute('height', '0.3');
+        } else {
+          videoBox.setAttribute('width', '0.7');
+          videoBox.setAttribute('height', '0.4');
+        }
+      }
+      
+      window.addEventListener('resize', adjustVideoSize);
+      adjustVideoSize();
     });
   </script>
 </body>
