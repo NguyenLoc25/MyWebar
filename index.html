@@ -3,47 +3,68 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>AR Video Player with Optimized Focus</title>
+  <title>AR Video Player with Centered Positioning</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
     .error-message {
       position: fixed;
       top: 10px;
-      left: 10px;
+      left: 50%;
+      transform: translateX(-50%);
       background: rgba(255,0,0,0.7);
       color: white;
       padding: 10px;
       border-radius: 5px;
       z-index: 10000;
       display: none;
+      max-width: 90%;
+      text-align: center;
     }
     a-scene {
       width: 100vw;
       height: 100vh;
-      overflow: hidden;
+      position: fixed;
+      top: 0;
+      left: 0;
     }
-    /* Thêm blur effect khi mất focus */
+    /* Blur effect when marker is lost */
     .blur-effect {
       filter: blur(2px);
       transition: filter 0.3s ease;
     }
-    /* Ẩn nội dung ngoài QR code */
-    .hide-outside {
-      overflow: hidden;
-      clip-path: inset(0 0 0 0);
+    /* Manual focus button */
+    #focusBtn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10000;
+      padding: 10px;
+      display: none;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    /* Center all AR content */
+    .center-content {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
     }
   </style>
 </head>
-<body style="margin: 0px; overflow: hidden;">
+<body>
   <div id="error" class="error-message"></div>
 
-  <!-- Thêm nút bật/tắt focus manual -->
-  <button id="focusBtn" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; padding: 10px; display: none;">
-    Manual Focus
-  </button>
+  <button id="focusBtn">Manual Focus</button>
 
   <a-scene 
     embedded 
@@ -63,7 +84,7 @@
              src="./asset/Hydro_v2.mp4" webkit-playsinline playsinline></video>
     </a-assets>
 
-    <!-- Static Path - Tập trung ở giữa QR code -->
+    <!-- Centered Path -->
     <a-entity id="pathEntity" visible="false" position="0 0 0">
       <!-- Path lines -->
       <a-entity line="start: -0.3 0 0; end: -0.15 0.1 0; color: #118AFF"></a-entity>
@@ -82,7 +103,7 @@
       <a-entity text="value: Step 2; align: center; color: white" position="0 -0.15 0" scale="0.3 0.3 0.3"></a-entity>
       <a-entity text="value: End; align: center; color: white" position="0.15 0.25 0" scale="0.3 0.3 0.3"></a-entity>
 
-      <!-- Video Box (inside pathEntity) -->
+      <!-- Centered Video Box -->
       <a-entity id="videoEntity" position="0 0.2 0" visible="false">
         <a-box 
           position="0 0 0" 
@@ -95,7 +116,7 @@
       </a-entity>
     </a-entity>
 
-    <!-- Marker camera với cấu hình tối ưu -->
+    <!-- Marker camera -->
     <a-marker-camera 
       type="pattern" 
       url="/pattern-hydro.patt" 
@@ -112,20 +133,20 @@
     const focusBtn = document.getElementById('focusBtn');
     const scene = document.querySelector('a-scene');
     
-    // Animation state với thời gian ngắn hơn và chế độ lặp
+    // Animation configuration with centered positions
     let animationState = {
       currentStep: 0,
       isAnimating: false,
       isReversing: false,
       steps: [
-        { position: "0 0.2 0", delay: 0, duration: 1000 },    // Start
-        { position: "0.1 0.3 0", delay: 0, duration: 1000 },  // Step 1
-        { position: "0 0.1 0", delay: 0, duration: 1000 },    // Step 2
-        { position: "0.2 0.4 0", delay: 1000, duration: 1000 }   // End
+        { position: "0 0.2 0", delay: 0, duration: 1000 },    // Start (centered)
+        { position: "0.1 0.3 0", delay: 0, duration: 1000 },   // Step 1 (slightly right)
+        { position: "-0.1 0.1 0", delay: 0, duration: 1000 },  // Step 2 (slightly left)
+        { position: "0 0.4 0", delay: 1000, duration: 1000 }   // End (centered up)
       ],
       reverseSteps: [
-        { position: "0.2 0.4 0", delay: 0, duration: 1000 },  // End
-        { position: "0 0.1 0", delay: 0, duration: 1000 },     // Step 2
+        { position: "0 0.4 0", delay: 0, duration: 1000 },    // End
+        { position: "-0.1 0.1 0", delay: 0, duration: 1000 }, // Step 2
         { position: "0.1 0.3 0", delay: 0, duration: 1000 },  // Step 1
         { position: "0 0.2 0", delay: 1000, duration: 1000 }  // Start
       ]
@@ -150,7 +171,7 @@
       const steps = animationState.isReversing ? animationState.reverseSteps : animationState.steps;
       
       if (animationState.currentStep >= steps.length) {
-        // Đảo chiều animation khi hoàn thành một chu kỳ
+        // Reverse animation direction
         animationState.isReversing = !animationState.isReversing;
         animationState.currentStep = 0;
       }
@@ -167,7 +188,7 @@
         
         animationState.currentStep++;
         
-        // Tiếp tục animation
+        // Continue animation
         setTimeout(moveToNextStep, stepConfig.duration + stepConfig.delay);
       }, stepConfig.delay);
     }
@@ -180,7 +201,7 @@
       animationState.isReversing = false;
     }
 
-    // Hàm manual focus cho camera
+    // Manual focus for camera
     function triggerManualFocus() {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const constraints = {
@@ -192,7 +213,6 @@
         
         navigator.mediaDevices.getUserMedia(constraints)
           .then(function(stream) {
-            // Áp dụng stream mới với focus được điều chỉnh
             const videoElement = document.querySelector('video[autoplay]');
             if (videoElement) {
               videoElement.srcObject = stream;
@@ -210,10 +230,9 @@
         return;
       }
 
-      // Thiết lập camera với facingMode: environment
       const marker = document.querySelector('a-marker-camera');
       
-      // Kiểm tra và bật nút manual focus nếu hỗ trợ
+      // Enable manual focus button if supported
       if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
         focusBtn.style.display = 'block';
         focusBtn.addEventListener('click', triggerManualFocus);
@@ -224,7 +243,10 @@
         path.setAttribute('visible', true);
         videoEntity.setAttribute('visible', true);
         
-        // Thêm hiệu ứng focus khi tìm thấy marker
+        // Reset positions to center
+        path.setAttribute('position', '0 0 0');
+        videoEntity.setAttribute('position', '0 0.2 0');
+        
         scene.classList.remove('blur-effect');
         
         if (!animationState.isAnimating) {
@@ -236,8 +258,6 @@
       marker.addEventListener('markerLost', () => {
         videoEntity.setAttribute('visible', false);
         path.setAttribute('visible', false);
-        
-        // Thêm hiệu ứng blur khi mất marker
         scene.classList.add('blur-effect');
       });
 
@@ -245,33 +265,33 @@
         showError('Video load error. Check path: ./asset/Hydro_v2.mp4');
       };
       
-      // Cải thiện FOV bằng cách điều chỉnh camera parameters
+      // Configure camera for centered view
       const camera = document.querySelector('[camera]');
       if (camera) {
-        camera.setAttribute('camera', 'fov', 50); // Giảm FOV để giảm biến dạng
-        camera.setAttribute('camera', 'near', 0.01); // Điều chỉnh near plane
-        camera.setAttribute('camera', 'far', 100); // Điều chỉnh far plane
+        camera.setAttribute('camera', 'fov', 50);
+        camera.setAttribute('camera', 'near', 0.01);
+        camera.setAttribute('camera', 'far', 100);
+        camera.setAttribute('position', '0 0 0');
       }
       
-      // Điều chỉnh kích thước video dựa trên hướng thiết bị
+      // Adjust video size based on orientation
       function adjustVideoSize() {
         const videoBox = document.querySelector('a-box');
-        if (window.innerHeight > window.innerWidth) {
-          // Chế độ dọc
-          videoBox.setAttribute('width', '0.35');
-          videoBox.setAttribute('height', '0.2');
-        } else {
-          // Chế độ ngang
-          videoBox.setAttribute('width', '0.4');
-          videoBox.setAttribute('height', '0.25');
+        if (videoBox) {
+          if (window.innerHeight > window.innerWidth) {
+            // Portrait mode
+            videoBox.setAttribute('width', '0.35');
+            videoBox.setAttribute('height', '0.2');
+          } else {
+            // Landscape mode
+            videoBox.setAttribute('width', '0.4');
+            videoBox.setAttribute('height', '0.25');
+          }
         }
       }
       
       window.addEventListener('resize', adjustVideoSize);
       adjustVideoSize();
-      
-      // Thêm lớp hide-outside để ẩn nội dung ngoài QR code
-      scene.classList.add('hide-outside');
     });
   </script>
 </body>
