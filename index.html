@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>AR Video Player with Looping Path</title>
+  <title>AR Video Player with Optimized Focus</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
@@ -24,39 +24,60 @@
       width: 100vw;
       height: 100vh;
     }
+    /* Thêm blur effect khi mất focus */
+    .blur-effect {
+      filter: blur(2px);
+      transition: filter 0.3s ease;
+    }
   </style>
 </head>
 <body style="margin: 0px; overflow: hidden;">
   <div id="error" class="error-message"></div>
 
-  <a-scene embedded arjs="detectionMode: mono; debugUIEnabled: false;" renderer="logarithmicDepthBuffer: true;">
+  <!-- Thêm nút bật/tắt focus manual -->
+  <button id="focusBtn" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; padding: 10px; display: none;">
+    Manual Focus
+  </button>
+
+  <a-scene 
+    embedded 
+    arjs="
+      sourceType: webcam;
+      debugUIEnabled: false;
+      detectionMode: mono_and_matrix;
+      matrixCodeType: 3x3;
+      cameraParametersUrl: https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
+    " 
+    renderer="logarithmicDepthBuffer: true;"
+    vr-mode-ui="enabled: false">
+    
     <!-- Preload video -->
     <a-assets>
       <video id="videoTexture" autoplay loop muted crossorigin="anonymous"
              src="./asset/Hydro_v2.mp4" webkit-playsinline playsinline></video>
     </a-assets>
 
-    <!-- Static Path - Bắt đầu từ trung tâm bên trái -->
-    <a-entity id="pathEntity" visible="false" position="-0.8 0 0">
+    <!-- Static Path - Tập trung ở giữa QR code -->
+    <a-entity id="pathEntity" visible="false" position="0 0 0">
       <!-- Path lines -->
-      <a-entity line="start: 0 0 0; end: 0.6 0.2 0; color: #118AFF"></a-entity>
-      <a-entity line="start: 0.6 0.2 0; end: 1.2 -0.1 0; color: #118AFF"></a-entity>
-      <a-entity line="start: 1.2 -0.1 0; end: 1.8 0.3 0; color: #118AFF"></a-entity>
+      <a-entity line="start: -0.8 0 0; end: -0.4 0.2 0; color: #118AFF"></a-entity>
+      <a-entity line="start: -0.4 0.2 0; end: 0 -0.1 0; color: #118AFF"></a-entity>
+      <a-entity line="start: 0 -0.1 0; end: 0.4 0.3 0; color: #118AFF"></a-entity>
       
       <!-- Path markers/dots -->
-      <a-sphere position="0 0 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="0.6 0.2 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="1.2 -0.1 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="1.8 0.3 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="-0.8 0 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="-0.4 0.2 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="0 -0.1 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <a-sphere position="0.4 0.3 0" radius="0.03" color="#FF3E96"></a-sphere>
       
       <!-- Path labels -->
-      <a-entity text="value: Start; align: center; color: white" position="0 0.2 0" scale="0.5 0.5 0.5"></a-entity>
-      <a-entity text="value: Step 1; align: center; color: white" position="0.6 0.4 0" scale="0.5 0.5 0.5"></a-entity>
-      <a-entity text="value: Step 2; align: center; color: white" position="1.2 -0.3 0" scale="0.5 0.5 0.5"></a-entity>
-      <a-entity text="value: End; align: center; color: white" position="1.8 0.5 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: Start; align: center; color: white" position="-0.8 0.2 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: Step 1; align: center; color: white" position="-0.4 0.4 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: Step 2; align: center; color: white" position="0 -0.3 0" scale="0.5 0.5 0.5"></a-entity>
+      <a-entity text="value: End; align: center; color: white" position="0.4 0.5 0" scale="0.5 0.5 0.5"></a-entity>
 
       <!-- Video Box (inside pathEntity) -->
-      <a-entity id="videoEntity" position="0 0.5 0" visible="false">
+      <a-entity id="videoEntity" position="-0.8 0.5 0" visible="false">
         <a-box 
           position="0 0 0" 
           width="0.6" 
@@ -68,8 +89,13 @@
       </a-entity>
     </a-entity>
 
-    <!-- Marker camera -->
-    <a-marker-camera type="pattern" url="./pattern-hydro.patt" emitevents="true"></a-marker-camera>
+    <!-- Marker camera với cấu hình tối ưu -->
+    <a-marker-camera 
+      type="pattern" 
+      url="./pattern-hydro.patt" 
+      emitevents="true"
+      preset="hiro">
+    </a-marker-camera>
   </a-scene>
 
   <script>
@@ -77,6 +103,8 @@
     const video = document.querySelector('#videoTexture');
     const videoEntity = document.querySelector('#videoEntity');
     const path = document.querySelector('#pathEntity');
+    const focusBtn = document.getElementById('focusBtn');
+    const scene = document.querySelector('a-scene');
     
     // Animation state với thời gian ngắn hơn và chế độ lặp
     let animationState = {
@@ -84,16 +112,16 @@
       isAnimating: false,
       isReversing: false,
       steps: [
-        { position: "0 0.5 0", delay: 0, duration: 1000 },      // Start
-        { position: "0.6 0.7 0", delay: 0, duration: 1000 },    // Step 1
-        { position: "1.2 0.4 0", delay: 0, duration: 1000 },    // Step 2
-        { position: "1.8 0.8 0", delay: 1000, duration: 1000 }  // End
+        { position: "-0.8 0.5 0", delay: 0, duration: 1000 },    // Start
+        { position: "-0.4 0.7 0", delay: 0, duration: 1000 },    // Step 1
+        { position: "0 0.4 0", delay: 0, duration: 1000 },       // Step 2
+        { position: "0.4 0.8 0", delay: 1000, duration: 1000 }   // End
       ],
       reverseSteps: [
-        { position: "1.8 0.8 0", delay: 0, duration: 1000 },    // End
-        { position: "1.2 0.4 0", delay: 0, duration: 1000 },    // Step 2
-        { position: "0.6 0.7 0", delay: 0, duration: 1000 },    // Step 1
-        { position: "0 0.5 0", delay: 1000, duration: 1000 }    // Start
+        { position: "0.4 0.8 0", delay: 0, duration: 1000 },    // End
+        { position: "0 0.4 0", delay: 0, duration: 1000 },      // Step 2
+        { position: "-0.4 0.7 0", delay: 0, duration: 1000 },   // Step 1
+        { position: "-0.8 0.5 0", delay: 1000, duration: 1000 } // Start
       ]
     };
 
@@ -119,8 +147,6 @@
         // Đảo chiều animation khi hoàn thành một chu kỳ
         animationState.isReversing = !animationState.isReversing;
         animationState.currentStep = 0;
-        
-        // Nếu muốn dừng sau một số lần lặp, có thể thêm điều kiện ở đây
       }
       
       const stepConfig = steps[animationState.currentStep];
@@ -148,18 +174,52 @@
       animationState.isReversing = false;
     }
 
+    // Hàm manual focus cho camera
+    function triggerManualFocus() {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const constraints = {
+          video: {
+            facingMode: 'environment',
+            advanced: [{ focusMode: 'manual', focusDistance: 0.5 }]
+          }
+        };
+        
+        navigator.mediaDevices.getUserMedia(constraints)
+          .then(function(stream) {
+            // Áp dụng stream mới với focus được điều chỉnh
+            const videoElement = document.querySelector('video[autoplay]');
+            if (videoElement) {
+              videoElement.srcObject = stream;
+            }
+          })
+          .catch(function(error) {
+            showError('Manual focus error: ' + error.message);
+          });
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       if (!video) {
         showError('Video element not found');
         return;
       }
 
+      // Thiết lập camera với facingMode: environment
       const marker = document.querySelector('a-marker-camera');
       
+      // Kiểm tra và bật nút manual focus nếu hỗ trợ
+      if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+        focusBtn.style.display = 'block';
+        focusBtn.addEventListener('click', triggerManualFocus);
+      }
+
       marker.addEventListener('markerFound', () => {
         video.play().catch(e => showError('Video play error: ' + e.message));
         path.setAttribute('visible', true);
         videoEntity.setAttribute('visible', true);
+        
+        // Thêm hiệu ứng focus khi tìm thấy marker
+        scene.classList.remove('blur-effect');
         
         if (!animationState.isAnimating) {
           resetAnimation();
@@ -170,11 +230,20 @@
       marker.addEventListener('markerLost', () => {
         videoEntity.setAttribute('visible', false);
         path.setAttribute('visible', false);
+        
+        // Thêm hiệu ứng blur khi mất marker
+        scene.classList.add('blur-effect');
       });
 
       video.onerror = () => {
         showError('Video load error. Check path: ./asset/Hydro_v2.mp4');
       };
+      
+      // Cải thiện FOV bằng cách điều chỉnh camera parameters
+      const camera = document.querySelector('[camera]');
+      if (camera) {
+        camera.setAttribute('camera', 'fov', 60); // Giảm FOV để giảm biến dạng
+      }
       
       function adjustVideoSize() {
         const videoBox = document.querySelector('a-box');
