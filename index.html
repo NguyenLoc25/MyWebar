@@ -63,7 +63,6 @@
 </head>
 <body>
   <div id="error" class="error-message"></div>
-
   <button id="focusBtn">Manual Focus</button>
 
   <a-scene 
@@ -84,32 +83,40 @@
              src="./asset/Hydro_v2.mp4" webkit-playsinline playsinline></video>
     </a-assets>
 
+    <!-- Cấu hình tập trung - CHỈ CHỈNH SỬA KÍCH THƯỚC Ở ĐÂY -->
+    <a-entity id="config" 
+              video-width="1.0" 
+              video-height="1.5" 
+              video-depth="0.1"
+              sphere-radius="0.05"
+              line-width="0.03"
+              text-scale="0.8 0.8 0.8"
+              visible="false">
+    </a-entity>
+
     <!-- Centered Path -->
     <a-entity id="pathEntity" visible="false" position="0 0 0">
-      <!-- Path lines - increased width -->
-      <a-entity line="start: -0.6 0 0; end: -0.3 0.2 0; color: #118AFF" line__thicker="width: 0.02"></a-entity>
-      <a-entity line="start: -0.3 0.2 0; end: 0 -0.1 0; color: #118AFF" line__thicker="width: 0.02"></a-entity>
-      <a-entity line="start: 0 -0.1 0; end: 0.3 0.3 0; color: #118AFF" line__thicker="width: 0.02"></a-entity>
+      <!-- Path lines -->
+      <a-entity class="path-line" line="start: -0.6 0 0; end: -0.3 0.2 0; color: #118AFF"></a-entity>
+      <a-entity class="path-line" line="start: -0.3 0.2 0; end: 0 -0.1 0; color: #118AFF"></a-entity>
+      <a-entity class="path-line" line="start: 0 -0.1 0; end: 0.3 0.3 0; color: #118AFF"></a-entity>
       
-      <!-- Path markers/dots - increased size -->
-      <a-sphere position="-0.6 0 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="-0.3 0.2 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="0 -0.1 0" radius="0.03" color="#FF3E96"></a-sphere>
-      <a-sphere position="0.3 0.3 0" radius="0.03" color="#FF3E96"></a-sphere>
+      <!-- Path markers/dots -->
+      <a-sphere class="path-sphere" position="-0.6 0 0" color="#FF3E96"></a-sphere>
+      <a-sphere class="path-sphere" position="-0.3 0.2 0" color="#FF3E96"></a-sphere>
+      <a-sphere class="path-sphere" position="0 -0.1 0" color="#FF3E96"></a-sphere>
+      <a-sphere class="path-sphere" position="0.3 0.3 0" color="#FF3E96"></a-sphere>
       
-      <!-- Path labels - increased size -->
-      <a-entity text="value: Start; align: center; color: white" position="-0.6 0.2 0" scale="0.6 0.6 0.6"></a-entity>
-      <a-entity text="value: Step 1; align: center; color: white" position="-0.3 0.4 0" scale="0.6 0.6 0.6"></a-entity>
-      <a-entity text="value: Step 2; align: center; color: white" position="0 -0.2 0" scale="0.6 0.6 0.6"></a-entity>
-      <a-entity text="value: End; align: center; color: white" position="0.3 0.5 0" scale="0.6 0.6 0.6"></a-entity>
+      <!-- Path labels -->
+      <a-entity class="path-text" text="value: Start; align: center; color: white" position="-0.6 0.2 0"></a-entity>
+      <a-entity class="path-text" text="value: Step 1; align: center; color: white" position="-0.3 0.4 0"></a-entity>
+      <a-entity class="path-text" text="value: Step 2; align: center; color: white" position="0 -0.2 0"></a-entity>
+      <a-entity class="path-text" text="value: End; align: center; color: white" position="0.3 0.5 0"></a-entity>
 
-      <!-- Centered Video Box - increased size -->
+      <!-- Centered Video Box -->
       <a-entity id="videoEntity" position="0 0.4 0" visible="false">
-        <a-box 
+        <a-box class="video-box"
           position="0 0 0" 
-          width="0.8" 
-          height="0.5" 
-          depth="0.02"
           rotation="-90 0 0"
           material="shader: flat; src: #videoTexture">
         </a-box>
@@ -224,12 +231,61 @@
       }
     }
 
+    // Hàm áp dụng cấu hình kích thước từ entity config
+    function applySizeConfig() {
+      const config = document.getElementById('config');
+      
+      // Cấu hình video
+      const videoBox = document.querySelector('.video-box');
+      if (videoBox) {
+        videoBox.setAttribute('width', config.getAttribute('video-width'));
+        videoBox.setAttribute('height', config.getAttribute('video-height'));
+        videoBox.setAttribute('depth', config.getAttribute('video-depth'));
+      }
+      
+      // Cấu hình các sphere
+      document.querySelectorAll('.path-sphere').forEach(sphere => {
+        sphere.setAttribute('radius', config.getAttribute('sphere-radius'));
+      });
+      
+      // Cấu hình các line
+      document.querySelectorAll('.path-line').forEach(line => {
+        line.setAttribute('line__thicker', 'width: ' + config.getAttribute('line-width'));
+      });
+      
+      // Cấu hình text
+      document.querySelectorAll('.path-text').forEach(text => {
+        text.setAttribute('scale', config.getAttribute('text-scale'));
+      });
+    }
+    
+    // Hàm điều chỉnh kích thước video theo hướng thiết bị
+    function adjustVideoSize() {
+      const config = document.getElementById('config');
+      const videoBox = document.querySelector('.video-box');
+      
+      if (videoBox) {
+        if (window.innerHeight > window.innerWidth) {
+          // Portrait mode - giảm kích thước 10%
+          videoBox.setAttribute('width', config.getAttribute('video-width') * 0.9);
+          videoBox.setAttribute('height', config.getAttribute('video-height') * 0.9);
+        } else {
+          // Landscape mode - sử dụng giá trị mặc định từ config
+          videoBox.setAttribute('width', config.getAttribute('video-width'));
+          videoBox.setAttribute('height', config.getAttribute('video-height'));
+        }
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       if (!video) {
         showError('Video element not found');
         return;
       }
 
+      // Áp dụng cấu hình kích thước ban đầu
+      applySizeConfig();
+      
       const marker = document.querySelector('a-marker-camera');
       
       // Enable manual focus button if supported
@@ -274,24 +330,11 @@
         camera.setAttribute('position', '0 0 0');
       }
       
-      // Adjust video size based on orientation
-      function adjustVideoSize() {
-        const videoBox = document.querySelector('a-box');
-        if (videoBox) {
-          if (window.innerHeight > window.innerWidth) {
-            // Portrait mode
-            videoBox.setAttribute('width', '0.7');
-            videoBox.setAttribute('height', '0.4');
-          } else {
-            // Landscape mode
-            videoBox.setAttribute('width', '0.8');
-            videoBox.setAttribute('height', '0.5');
-          }
-        }
-      }
-      
-      window.addEventListener('resize', adjustVideoSize);
-      adjustVideoSize();
+      // Theo dõi thay đổi kích thước màn hình
+      window.addEventListener('resize', () => {
+        applySizeConfig();
+        adjustVideoSize();
+      });
     });
   </script>
 </body>
