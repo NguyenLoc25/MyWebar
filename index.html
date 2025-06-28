@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>AR Video Player with Centered Positioning</title>
+  <title>AR Video with Draggable Points</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <!-- Super Hands for dragging -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-super-hands-component@1.0.0/dist/super-hands.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -28,42 +30,10 @@
       max-width: 90%;
       text-align: center;
     }
-    a-scene {
-      width: 100vw;
-      height: 100vh;
-      position: fixed;
-      top: 0;
-      left: 0;
-    }
-    /* Blur effect when marker is lost */
-    .blur-effect {
-      filter: blur(2px);
-      transition: filter 0.3s ease;
-    }
-    /* Manual focus button */
-    #focusBtn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 10000;
-      padding: 10px;
-      display: none;
-      background: rgba(0,0,0,0.7);
-      color: white;
-      border: none;
-      border-radius: 5px;
-    }
-    /* Center all AR content */
-    .center-content {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%);
-    }
   </style>
 </head>
 <body>
   <div id="error" class="error-message"></div>
-  <button id="focusBtn">Manual Focus</button>
 
   <a-scene 
     embedded 
@@ -74,8 +44,8 @@
       matrixCodeType: 3x3;
       cameraParametersUrl: https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
     " 
-    renderer="logarithmicDepthBuffer: true;"
-    vr-mode-ui="enabled: false">
+    vr-mode-ui="enabled: false"
+    loading-screen="enabled: false">
     
     <!-- Preload video -->
     <a-assets>
@@ -83,42 +53,69 @@
              src="./asset/Hydro_v2.mp4" webkit-playsinline playsinline></video>
     </a-assets>
 
-    <!-- Cấu hình tập trung - CHỈ CHỈNH SỬA KÍCH THƯỚC Ở ĐÂY -->
-    <a-entity id="config" 
-              video-width="1.0" 
-              video-height="1.5" 
-              video-depth="0.1"
-              sphere-radius="0.05"
-              line-width="0.03"
-              text-scale="0.8 0.8 0.8"
-              visible="false">
+    <!-- Configuration Entity -->
+    <a-entity id="config" visible="false"
+              video-width="0.7"
+              video-height="0.4"
+              video-depth="0.01"
+              point-radius="0.05"
+              point-color="#FF3E96"
+              line-color="#118AFF"
+              line-width="0.02"
+              move-duration="1500"
+              pause-duration="1000">
     </a-entity>
 
-    <!-- Centered Path -->
-    <a-entity id="pathEntity" visible="false" position="0 0 0">
-      <!-- Path lines -->
-      <a-entity class="path-line" line="start: -0.6 0 0; end: -0.3 0.2 0; color: #118AFF"></a-entity>
-      <a-entity class="path-line" line="start: -0.3 0.2 0; end: 0 -0.1 0; color: #118AFF"></a-entity>
-      <a-entity class="path-line" line="start: 0 -0.1 0; end: 0.3 0.3 0; color: #118AFF"></a-entity>
+    <!-- AR Content (initially hidden) -->
+    <a-entity id="arContent" visible="false">
+      <!-- Points Container -->
+      <a-entity id="pointsContainer">
+        <!-- 5 Draggable Points -->
+        <a-sphere class="point" position="-0.6 -0.2 0" radius="0.05" color="#FF3E96"
+                 draggable="" super-hands="colliderEvent: raycaster-intersected; 
+                 colliderEventProperty: els; 
+                 colliderEndEvent: raycaster-intersected-cleared; 
+                 colliderEndEventProperty: els"></a-sphere>
+        <a-sphere class="point" position="-0.3 0.1 0" radius="0.05" color="#FF3E96"
+                 draggable="" super-hands="colliderEvent: raycaster-intersected; 
+                 colliderEventProperty: els; 
+                 colliderEndEvent: raycaster-intersected-cleared; 
+                 colliderEndEventProperty: els"></a-sphere>
+        <a-sphere class="point" position="0 0.4 0" radius="0.05" color="#FF3E96"
+                 draggable="" super-hands="colliderEvent: raycaster-intersected; 
+                 colliderEventProperty: els; 
+                 colliderEndEvent: raycaster-intersected-cleared; 
+                 colliderEndEventProperty: els"></a-sphere>
+        <a-sphere class="point" position="0.3 0.1 0" radius="0.05" color="#FF3E96"
+                 draggable="" super-hands="colliderEvent: raycaster-intersected; 
+                 colliderEventProperty: els; 
+                 colliderEndEvent: raycaster-intersected-cleared; 
+                 colliderEndEventProperty: els"></a-sphere>
+        <a-sphere class="point" position="0.6 -0.2 0" radius="0.05" color="#FF3E96"
+                 draggable="" super-hands="colliderEvent: raycaster-intersected; 
+                 colliderEventProperty: els; 
+                 colliderEndEvent: raycaster-intersected-cleared; 
+                 colliderEndEventProperty: els"></a-sphere>
+      </a-entity>
       
-      <!-- Path markers/dots -->
-      <a-sphere class="path-sphere" position="-0.6 0 0" color="#FF3E96"></a-sphere>
-      <a-sphere class="path-sphere" position="-0.3 0.2 0" color="#FF3E96"></a-sphere>
-      <a-sphere class="path-sphere" position="0 -0.1 0" color="#FF3E96"></a-sphere>
-      <a-sphere class="path-sphere" position="0.3 0.3 0" color="#FF3E96"></a-sphere>
+      <!-- Connecting Lines -->
+      <a-entity id="linesContainer">
+        <a-entity class="connecting-line" line="start: -0.6 -0.2 0; end: -0.3 0.1 0; color: #118AFF"></a-entity>
+        <a-entity class="connecting-line" line="start: -0.3 0.1 0; end: 0 0.4 0; color: #118AFF"></a-entity>
+        <a-entity class="connecting-line" line="start: 0 0.4 0; end: 0.3 0.1 0; color: #118AFF"></a-entity>
+        <a-entity class="connecting-line" line="start: 0.3 0.1 0; end: 0.6 -0.2 0; color: #118AFF"></a-entity>
+        <a-entity class="connecting-line" line="start: 0.6 -0.2 0; end: -0.6 -0.2 0; color: #118AFF"></a-entity>
+      </a-entity>
       
-      <!-- Path labels -->
-      <a-entity class="path-text" text="value: Start; align: center; color: white" position="-0.6 0.2 0"></a-entity>
-      <a-entity class="path-text" text="value: Step 1; align: center; color: white" position="-0.3 0.4 0"></a-entity>
-      <a-entity class="path-text" text="value: Step 2; align: center; color: white" position="0 -0.2 0"></a-entity>
-      <a-entity class="path-text" text="value: End; align: center; color: white" position="0.3 0.5 0"></a-entity>
-
-      <!-- Centered Video Box -->
-      <a-entity id="videoEntity" position="0 0.4 0" visible="false">
+      <!-- Video Box -->
+      <a-entity id="videoEntity" position="-0.6 -0.2 0.01">
         <a-box class="video-box"
-          position="0 0 0" 
-          rotation="-90 0 0"
-          material="shader: flat; src: #videoTexture">
+               position="0 0 0"
+               width="0.7"
+               height="0.4"
+               depth="0.01"
+               rotation="-90 0 0"
+               material="shader: flat; src: #videoTexture">
         </a-box>
       </a-entity>
     </a-entity>
@@ -127,8 +124,7 @@
     <a-marker-camera 
       type="pattern" 
       url="/pattern-hydro.patt" 
-      emitevents="true"
-      raycaster="objects: a-box, a-sphere, a-entity">
+      emitevents="true">
     </a-marker-camera>
   </a-scene>
 
@@ -136,145 +132,105 @@
     const errorDiv = document.getElementById('error');
     const video = document.querySelector('#videoTexture');
     const videoEntity = document.querySelector('#videoEntity');
-    const path = document.querySelector('#pathEntity');
-    const focusBtn = document.getElementById('focusBtn');
-    const scene = document.querySelector('a-scene');
+    const arContent = document.querySelector('#arContent');
+    const pointsContainer = document.querySelector('#pointsContainer');
+    const linesContainer = document.querySelector('#linesContainer');
+    const config = document.getElementById('config');
     
-    // Animation configuration with increased movement range
-    let animationState = {
-      currentStep: 0,
-      isAnimating: false,
-      isReversing: false,
-      steps: [
-        { position: "0 0.4 0", delay: 0, duration: 1000 },    // Start (centered)
-        { position: "0.2 0.6 0", delay: 0, duration: 1000 },  // Step 1 (slightly right)
-        { position: "-0.2 0.2 0", delay: 0, duration: 1000 },  // Step 2 (slightly left)
-        { position: "0 0.8 0", delay: 1000, duration: 1000 }   // End (centered up)
-      ],
-      reverseSteps: [
-        { position: "0 0.8 0", delay: 0, duration: 1000 },    // End
-        { position: "-0.2 0.2 0", delay: 0, duration: 1000 }, // Step 2
-        { position: "0.2 0.6 0", delay: 0, duration: 1000 },  // Step 1
-        { position: "0 0.4 0", delay: 1000, duration: 1000 }  // Start
-      ]
-    };
+    // Animation state
+    let animationInterval;
+    let currentPointIndex = 0;
+    let isAnimating = false;
 
-    function showError(message) {
-      errorDiv.textContent = message;
-      errorDiv.style.display = 'block';
-      console.error(message);
+    // Get current positions of all points
+    function getPointPositions() {
+      const points = document.querySelectorAll('.point');
+      return Array.from(points).map(point => {
+        const pos = point.getAttribute('position');
+        return { x: pos.x, y: pos.y, z: pos.z };
+      });
+    }
+
+    // Update connecting lines based on current point positions
+    function updateLines() {
+      const positions = getPointPositions();
+      const lines = document.querySelectorAll('.connecting-line');
+      
+      // Update each line
+      lines.forEach((line, index) => {
+        const nextIndex = (index + 1) % positions.length;
+        line.setAttribute('line', {
+          start: `${positions[index].x} ${positions[index].y} ${positions[index].z}`,
+          end: `${positions[nextIndex].x} ${positions[nextIndex].y} ${positions[nextIndex].z}`,
+          color: config.getAttribute('line-color')
+        });
+      });
+    }
+
+    function moveToNextPoint() {
+      const positions = getPointPositions();
+      if (positions.length === 0) return;
+      
+      currentPointIndex = (currentPointIndex + 1) % positions.length;
+      const nextPoint = positions[currentPointIndex];
+      
+      videoEntity.setAttribute('animation', {
+        property: 'position',
+        to: `${nextPoint.x} ${nextPoint.y} ${nextPoint.z + 0.01}`,
+        dur: parseInt(config.getAttribute('move-duration')),
+        easing: 'easeInOutQuad'
+      });
     }
 
     function startAnimation() {
-      if (animationState.isAnimating) return;
+      if (isAnimating) return;
       
-      animationState.isAnimating = true;
-      animationState.currentStep = 0;
-      animationState.isReversing = false;
-      moveToNextStep();
-    }
-
-    function moveToNextStep() {
-      const steps = animationState.isReversing ? animationState.reverseSteps : animationState.steps;
+      isAnimating = true;
+      const moveDuration = parseInt(config.getAttribute('move-duration'));
+      const pauseDuration = parseInt(config.getAttribute('pause-duration'));
+      const positions = getPointPositions();
       
-      if (animationState.currentStep >= steps.length) {
-        // Reverse animation direction
-        animationState.isReversing = !animationState.isReversing;
-        animationState.currentStep = 0;
-      }
+      if (positions.length === 0) return;
       
-      const stepConfig = steps[animationState.currentStep];
+      // Start at first point
+      videoEntity.setAttribute('position', `${positions[0].x} ${positions[0].y} ${positions[0].z + 0.01}`);
       
-      setTimeout(() => {
-        videoEntity.setAttribute('animation', {
-          property: 'position',
-          to: stepConfig.position,
-          dur: stepConfig.duration,
-          easing: 'easeInOutQuad'
-        });
-        
-        animationState.currentStep++;
-        
-        // Continue animation
-        setTimeout(moveToNextStep, stepConfig.duration + stepConfig.delay);
-      }, stepConfig.delay);
-    }
-
-    function resetAnimation() {
-      videoEntity.removeAttribute('animation');
-      videoEntity.setAttribute('position', animationState.steps[0].position);
-      animationState.currentStep = 0;
-      animationState.isAnimating = false;
-      animationState.isReversing = false;
-    }
-
-    // Manual focus for camera
-    function triggerManualFocus() {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const constraints = {
-          video: {
-            facingMode: 'environment',
-            advanced: [{ focusMode: 'manual', focusDistance: 0.5 }]
-          }
-        };
-        
-        navigator.mediaDevices.getUserMedia(constraints)
-          .then(function(stream) {
-            const videoElement = document.querySelector('video[autoplay]');
-            if (videoElement) {
-              videoElement.srcObject = stream;
+      function animateSequence() {
+        // Move through all points in sequence
+        for (let i = 1; i <= positions.length; i++) {
+          setTimeout(() => {
+            if (i < positions.length) {
+              moveToNextPoint();
+            } else {
+              // Return to first point after last point
+              setTimeout(() => {
+                currentPointIndex = 0;
+                videoEntity.setAttribute('animation', {
+                  property: 'position',
+                  to: `${positions[0].x} ${positions[0].y} ${positions[0].z + 0.01}`,
+                  dur: moveDuration,
+                  easing: 'easeInOutQuad'
+                });
+              }, pauseDuration);
             }
-          })
-          .catch(function(error) {
-            showError('Manual focus error: ' + error.message);
-          });
-      }
-    }
-
-    // Hàm áp dụng cấu hình kích thước từ entity config
-    function applySizeConfig() {
-      const config = document.getElementById('config');
-      
-      // Cấu hình video
-      const videoBox = document.querySelector('.video-box');
-      if (videoBox) {
-        videoBox.setAttribute('width', config.getAttribute('video-width'));
-        videoBox.setAttribute('height', config.getAttribute('video-height'));
-        videoBox.setAttribute('depth', config.getAttribute('video-depth'));
-      }
-      
-      // Cấu hình các sphere
-      document.querySelectorAll('.path-sphere').forEach(sphere => {
-        sphere.setAttribute('radius', config.getAttribute('sphere-radius'));
-      });
-      
-      // Cấu hình các line
-      document.querySelectorAll('.path-line').forEach(line => {
-        line.setAttribute('line__thicker', 'width: ' + config.getAttribute('line-width'));
-      });
-      
-      // Cấu hình text
-      document.querySelectorAll('.path-text').forEach(text => {
-        text.setAttribute('scale', config.getAttribute('text-scale'));
-      });
-    }
-    
-    // Hàm điều chỉnh kích thước video theo hướng thiết bị
-    function adjustVideoSize() {
-      const config = document.getElementById('config');
-      const videoBox = document.querySelector('.video-box');
-      
-      if (videoBox) {
-        if (window.innerHeight > window.innerWidth) {
-          // Portrait mode - giảm kích thước 10%
-          videoBox.setAttribute('width', config.getAttribute('video-width') * 0.9);
-          videoBox.setAttribute('height', config.getAttribute('video-height') * 0.9);
-        } else {
-          // Landscape mode - sử dụng giá trị mặc định từ config
-          videoBox.setAttribute('width', config.getAttribute('video-width'));
-          videoBox.setAttribute('height', config.getAttribute('video-height'));
+          }, (moveDuration + pauseDuration) * (i - 1));
         }
       }
+      
+      // Start animation
+      animateSequence();
+      
+      // Set interval for continuous loop
+      animationInterval = setInterval(animateSequence, (moveDuration + pauseDuration) * positions.length);
+    }
+
+    function stopAnimation() {
+      isAnimating = false;
+      if (animationInterval) {
+        clearInterval(animationInterval);
+        animationInterval = null;
+      }
+      videoEntity.removeAttribute('animation');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -283,59 +239,40 @@
         return;
       }
 
-      // Áp dụng cấu hình kích thước ban đầu
-      applySizeConfig();
+      // Hide everything initially
+      arContent.setAttribute('visible', 'false');
       
+      // Listen for marker events
       const marker = document.querySelector('a-marker-camera');
       
-      // Enable manual focus button if supported
-      if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
-        focusBtn.style.display = 'block';
-        focusBtn.addEventListener('click', triggerManualFocus);
-      }
-
       marker.addEventListener('markerFound', () => {
         video.play().catch(e => showError('Video play error: ' + e.message));
-        path.setAttribute('visible', true);
-        videoEntity.setAttribute('visible', true);
-        
-        // Reset positions to center
-        path.setAttribute('position', '0 0 0');
-        videoEntity.setAttribute('position', '0 0.4 0');
-        
-        scene.classList.remove('blur-effect');
-        
-        if (!animationState.isAnimating) {
-          resetAnimation();
-          startAnimation();
-        }
+        arContent.setAttribute('visible', 'true');
+        startAnimation();
       });
 
       marker.addEventListener('markerLost', () => {
-        videoEntity.setAttribute('visible', false);
-        path.setAttribute('visible', false);
-        scene.classList.add('blur-effect');
+        arContent.setAttribute('visible', 'false');
+        stopAnimation();
+      });
+
+      // Update lines when points are dragged
+      document.addEventListener('componentchanged', (e) => {
+        if (e.detail.name === 'position' && e.target.classList.contains('point')) {
+          updateLines();
+        }
       });
 
       video.onerror = () => {
         showError('Video load error. Check path: ./asset/Hydro_v2.mp4');
       };
-      
-      // Configure camera for centered view
-      const camera = document.querySelector('[camera]');
-      if (camera) {
-        camera.setAttribute('camera', 'fov', 50);
-        camera.setAttribute('camera', 'near', 0.01);
-        camera.setAttribute('camera', 'far', 100);
-        camera.setAttribute('position', '0 0 0');
-      }
-      
-      // Theo dõi thay đổi kích thước màn hình
-      window.addEventListener('resize', () => {
-        applySizeConfig();
-        adjustVideoSize();
-      });
     });
+
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      console.error(message);
+    }
   </script>
 </body>
 </html>
