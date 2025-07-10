@@ -238,14 +238,15 @@
         <a-entity class="connecting-line" line="start: 0.6 -0.2 0; end: -0.6 -0.2 0; color: #118AFF"></a-entity>
       </a-entity>
       
-      <!-- Video Box (kích thước lớn hơn) -->
-      <a-entity id="videoEntity" position="-0.6 -0.2 0.01">
+      <!-- Video Box (đã sửa rotation) -->
+      <a-entity id="videoEntity" position="-0.6 -0.2 0.01" rotation="0 90 0">
         <a-box class="video-box"
                position="0 0 0"
                width="1.4" 
                height="0.8"
                depth="0.01"
-               rotation="-90 0 0"
+               rotation="0 0 0"
+               visible="false"
                material="shader: flat; src: #videoTexture">
         </a-box>
       </a-entity>
@@ -326,6 +327,7 @@
     const toggleModeBtn = document.getElementById('toggleMode');
     const video = document.querySelector('#videoTexture');
     const videoEntity = document.querySelector('#videoEntity');
+    const videoBox = document.querySelector('.video-box');
     const arContent = document.querySelector('#arContent');
     const motorContent = document.querySelector('#motorContent');
     const pointsContainer = document.querySelector('#pointsContainer');
@@ -362,6 +364,11 @@
       video.pause();
       video.currentTime = 0;
       
+      // Hide video box completely
+      if (videoBox) {
+        videoBox.setAttribute('visible', 'false');
+      }
+      
       // Setup buttons
       menuToggle.addEventListener('click', toggleMenu);
       speedUpBtn.addEventListener('click', increaseBladeSpeed);
@@ -385,8 +392,17 @@
         console.log('Marker found!');
         markerFound = true;
         if (!is3DMode) {
-          video.play().catch(e => showError('Video play error: ' + e.message));
+          video.play().catch(e => {
+            console.error('Video play error:', e);
+            // Thử phát lại sau 1 giây nếu lỗi
+            setTimeout(() => {
+              video.play().catch(e => console.error('Retry failed:', e));
+            }, 1000);
+          });
           arContent.setAttribute('visible', 'true');
+          if (videoBox) {
+            videoBox.setAttribute('visible', 'true');
+          }
           startAnimation();
         }
       });
@@ -396,6 +412,9 @@
         markerFound = false;
         if (!is3DMode) {
           arContent.setAttribute('visible', 'false');
+          if (videoBox) {
+            videoBox.setAttribute('visible', 'false');
+          }
           stopAnimation();
           video.pause();
           video.currentTime = 0;
@@ -572,6 +591,9 @@
         modeIndicator.textContent = "3D Mode";
         toggleModeBtn.innerHTML = '<span class="menu-icon">📱</span> Chế độ AR';
         arContent.setAttribute('visible', 'false');
+        if (videoBox) {
+          videoBox.setAttribute('visible', 'false');
+        }
         motorContent.setAttribute('visible', 'true');
         markerCamera.setAttribute('arjs-marker-camera', 'enabled', false);
         camera3d.setAttribute('camera', 'active', true);
@@ -596,8 +618,15 @@
         
         if (markerFound) {
           arContent.setAttribute('visible', 'true');
+          if (videoBox) {
+            videoBox.setAttribute('visible', 'true');
+          }
           video.play().catch(e => showError('Video play error: ' + e.message));
           startAnimation();
+        } else {
+          if (videoBox) {
+            videoBox.setAttribute('visible', 'false');
+          }
         }
       }
     }
