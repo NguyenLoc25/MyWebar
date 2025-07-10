@@ -3,18 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-  <title>AR Video with Draggable Points</title>
+  <title>Hydro Motor AR Experience</title>
   <!-- A-Frame -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <!-- AR.js for A-Frame -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <!-- Super Hands for dragging -->
   <script src="https://cdn.jsdelivr.net/npm/aframe-super-hands-component@1.0.0/dist/super-hands.min.js"></script>
+  <!-- Animation component -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-animation-component@5.1.2/dist/aframe-animation-component.min.js"></script>
+  <!-- AFRAME Extras for controls -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
   <style>
     body {
       margin: 0;
       padding: 0;
       overflow: hidden;
+      font-family: Arial, sans-serif;
     }
     .error-message {
       position: fixed;
@@ -23,17 +28,142 @@
       transform: translateX(-50%);
       background: rgba(255,0,0,0.7);
       color: white;
-      padding: 10px;
-      border-radius: 5px;
+      padding: 10px 15px;
+      border-radius: 20px;
       z-index: 10000;
       display: none;
       max-width: 90%;
       text-align: center;
+      font-size: 14px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .mode-indicator {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 20px;
+      z-index: 10000;
+      font-size: 14px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+    .control-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 10px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .main-btn {
+      background: rgba(0, 119, 204, 0.8);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      font-size: 24px;
+      margin: 5px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      transition: all 0.2s;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .main-btn:hover, .main-btn:active {
+      background: rgba(0, 119, 204, 1);
+      transform: scale(1.1);
+    }
+    .control-menu {
+      background: rgba(0,0,0,0.7);
+      border-radius: 20px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+      display: none;
+      flex-direction: column;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .control-menu.show {
+      display: flex;
+    }
+    .control-item {
+      color: white;
+      padding: 10px 15px;
+      margin: 5px 0;
+      border-radius: 15px;
+      background: rgba(255,255,255,0.1);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .control-item:hover, .control-item:active {
+      background: rgba(255,255,255,0.2);
+    }
+    .control-item.active {
+      background: rgba(0, 119, 204, 0.5);
+    }
+    .speed-display {
+      color: white;
+      padding: 8px 12px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 15px;
+      margin: 5px 0;
+      font-size: 14px;
+      text-align: center;
+    }
+    .menu-icon {
+      display: inline-block;
+      margin-right: 8px;
+    }
+    @media (min-width: 768px) {
+      .control-panel {
+        right: 20px;
+      }
+      .main-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 28px;
+      }
+      .control-item {
+        padding: 12px 20px;
+        font-size: 16px;
+      }
+      .speed-display {
+        padding: 10px 15px;
+        font-size: 16px;
+      }
     }
   </style>
 </head>
 <body>
   <div id="error" class="error-message"></div>
+  <div id="modeIndicator" class="mode-indicator">AR Mode</div>
+  
+  <div class="control-panel">
+    <div id="controlMenu" class="control-menu">
+      <div id="speedDisplay" class="speed-display">Tốc độ: Bình thường (0.5 vòng/giây)</div>
+      <div id="speedUp" class="control-item">
+        <span class="menu-icon">⏫</span> Tăng tốc
+      </div>
+      <div id="speedDown" class="control-item">
+        <span class="menu-icon">⏬</span> Giảm tốc
+      </div>
+      <div id="stopStart" class="control-item">
+        <span class="menu-icon">⏸</span> Dừng
+      </div>
+      <div id="toggleMode" class="control-item">
+        <span class="menu-icon">🔄</span> Chuyển chế độ
+      </div>
+    </div>
+    <button id="menuToggle" class="main-btn">☰</button>
+  </div>
 
   <a-scene 
     embedded 
@@ -45,7 +175,8 @@
       cameraParametersUrl: https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/data/camera_para.dat;
     " 
     vr-mode-ui="enabled: false"
-    loading-screen="enabled: false">
+    loading-screen="enabled: false"
+    renderer="logarithmicDepthBuffer: true;">
     
     <!-- Preload video -->
     <a-assets>
@@ -55,8 +186,8 @@
 
     <!-- Configuration Entity -->
     <a-entity id="config" visible="false"
-              video-width="0.7"
-              video-height="0.4"
+              video-width="1.4"
+              video-height="0.8"
               video-depth="0.01"
               point-radius="0.05"
               point-color="#FF3E96"
@@ -68,8 +199,8 @@
 
     <!-- AR Content (initially hidden) -->
     <a-entity id="arContent" visible="false">
-      <!-- Points Container -->
-      <a-entity id="pointsContainer">
+      <!-- Points Container (ẩn đi) -->
+      <a-entity id="pointsContainer" visible="false">
         <!-- 5 Draggable Points -->
         <a-sphere class="point" position="-0.6 -0.2 0" radius="0.05" color="#FF3E96"
                  draggable="" super-hands="colliderEvent: raycaster-intersected; 
@@ -98,7 +229,7 @@
                  colliderEndEventProperty: els"></a-sphere>
       </a-entity>
       
-      <!-- Connecting Lines -->
+      <!-- Connecting Lines (giữ lại để hiển thị luồng chạy) -->
       <a-entity id="linesContainer">
         <a-entity class="connecting-line" line="start: -0.6 -0.2 0; end: -0.3 0.1 0; color: #118AFF"></a-entity>
         <a-entity class="connecting-line" line="start: -0.3 0.1 0; end: 0 0.4 0; color: #118AFF"></a-entity>
@@ -107,12 +238,12 @@
         <a-entity class="connecting-line" line="start: 0.6 -0.2 0; end: -0.6 -0.2 0; color: #118AFF"></a-entity>
       </a-entity>
       
-      <!-- Video Box -->
+      <!-- Video Box (kích thước lớn hơn) -->
       <a-entity id="videoEntity" position="-0.6 -0.2 0.01">
         <a-box class="video-box"
                position="0 0 0"
-               width="0.7"
-               height="0.4"
+               width="1.4" 
+               height="0.8"
                depth="0.01"
                rotation="-90 0 0"
                material="shader: flat; src: #videoTexture">
@@ -120,27 +251,171 @@
       </a-entity>
     </a-entity>
 
+    <!-- 3D Motor Content (initially hidden) -->
+    <a-entity id="motorContent" visible="false">
+      <!-- Lighting -->
+      <a-entity light="type: ambient; color: #888; intensity: 0.5"></a-entity>
+      <a-entity light="type: directional; color: #fff; intensity: 0.8" position="2 4 2"></a-entity>
+      <a-entity light="type: hemisphere; color: #4455aa; groundColor: #882222; intensity: 0.5"></a-entity>
+
+      <!-- Hydro Motor Model -->
+      <a-entity id="hydroMotor" position="0 0 0">
+        <!-- Water simulation -->
+        <a-plane position="0 0.01 0" rotation="-90 0 0" width="3" height="3" color="#1a6fc9" 
+                opacity="0.7" animation="property: rotation; to: -90 0 360; loop: true; dur: 10000; easing: linear"></a-plane>
+
+        <!-- Turbine -->
+        <a-entity id="turbine" position="0 1 0">
+          <a-cylinder radius="0.35" height="2" color="#555555" metalness="0.8" roughness="0.2"></a-cylinder>
+          <!-- Turbine blades -->
+          <a-entity id="blades">
+            <a-entity position="0 0 0.6">
+              <a-entity geometry="primitive: box; width: 0.2; height: 0.5; depth: 1.2" 
+                      material="color: #1f77b4; metalness: 0.5; roughness: 0.3"
+                      position="0.15 0 0" rotation="0 0 15"></a-entity>
+            </a-entity>
+            <a-entity position="0 0 -0.6">
+              <a-entity geometry="primitive: box; width: 0.2; height: 0.5; depth: 1.2" 
+                      material="color: #1f77b4; metalness: 0.5; roughness: 0.3"
+                      position="-0.15 0 0" rotation="0 0 -15"></a-entity>
+            </a-entity>
+            <a-entity position="0 0 0" rotation="0 90 0">
+              <a-entity geometry="primitive: box; width: 0.2; height: 0.5; depth: 2.2" 
+                      material="color: #1f77b4; metalness: 0.5; roughness: 0.3"
+                      position="0 0 0" rotation="0 0 0"></a-entity>
+            </a-entity>
+          </a-entity>
+        </a-entity>
+
+        <!-- Motor housing -->
+        <a-cylinder position="0 1 0" radius="1.2" height="2.2" color="#ffffff" 
+                    opacity="0.3" metalness="0.9" roughness="0.1"></a-cylinder>
+
+        <!-- Water Particles -->
+        <a-entity id="waterParticles" position="0 1.5 0">
+          <a-entity id="particleContainer"></a-entity>
+        </a-entity>
+      </a-entity>
+    </a-entity>
+
+    <!-- Camera for 3D view -->
+    <a-entity id="camera3d" camera="active: false" position="0 1.5 5" look-controls wasd-controls>
+      <a-cursor></a-cursor>
+    </a-entity>
+
     <!-- Marker camera -->
     <a-marker-camera 
+      id="markerCamera"
       type="pattern" 
-      url="/pattern-hydro.patt" 
-      emitevents="true">
+      url="/pattern-web.patt" 
+      emitevents="true"
+      arjs-marker-camera="enabled: true">
     </a-marker-camera>
   </a-scene>
 
   <script>
+    // DOM Elements
     const errorDiv = document.getElementById('error');
+    const modeIndicator = document.getElementById('modeIndicator');
+    const speedDisplay = document.getElementById('speedDisplay');
+    const menuToggle = document.getElementById('menuToggle');
+    const controlMenu = document.getElementById('controlMenu');
+    const speedUpBtn = document.getElementById('speedUp');
+    const speedDownBtn = document.getElementById('speedDown');
+    const stopStartBtn = document.getElementById('stopStart');
+    const toggleModeBtn = document.getElementById('toggleMode');
     const video = document.querySelector('#videoTexture');
     const videoEntity = document.querySelector('#videoEntity');
     const arContent = document.querySelector('#arContent');
+    const motorContent = document.querySelector('#motorContent');
     const pointsContainer = document.querySelector('#pointsContainer');
     const linesContainer = document.querySelector('#linesContainer');
     const config = document.getElementById('config');
+    const markerCamera = document.querySelector('#markerCamera');
+    const camera3d = document.querySelector('#camera3d');
+    const turbine = document.querySelector('#turbine');
+    const blades = document.querySelector('#blades');
     
-    // Animation state
+    // Application State
     let animationInterval;
     let currentPointIndex = 0;
     let isAnimating = false;
+    let is3DMode = false;
+    let isMotorRunning = true;
+    let markerFound = false;
+    let bladeAnimationDuration = 2000; // 2 seconds per rotation (default speed)
+    let isMotorStopped = false;
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!video) {
+        showError('Video element not found');
+        return;
+      }
+
+      // Hide everything initially
+      arContent.setAttribute('visible', 'false');
+      motorContent.setAttribute('visible', 'false');
+      pointsContainer.setAttribute('visible', 'false');
+      
+      // Setup buttons
+      
+      menuToggle.addEventListener('click', toggleMenu);
+      speedUpBtn.addEventListener('click', increaseBladeSpeed);
+      speedDownBtn.addEventListener('click', decreaseBladeSpeed);
+      stopStartBtn.addEventListener('click', toggleMotorState);
+      toggleModeBtn.addEventListener('click', toggleViewMode);
+      
+      // Close menu when clicking outside (but not on menu items)
+      document.addEventListener('click', (e) => {
+        if (!controlMenu.contains(e.target) && e.target !== menuToggle) {
+          controlMenu.classList.remove('show');
+        }
+      });
+      
+      // Initialize blade animation
+      resetBladeAnimation();
+      updateSpeedDisplay();
+      
+      // Listen for marker events
+      markerCamera.addEventListener('markerFound', () => {
+        console.log('Marker found!');
+        markerFound = true;
+        if (!is3DMode) {
+          video.play().catch(e => showError('Video play error: ' + e.message));
+          arContent.setAttribute('visible', 'true');
+          startAnimation();
+        }
+      });
+
+      markerCamera.addEventListener('markerLost', () => {
+        console.log('Marker lost!');
+        markerFound = false;
+        if (!is3DMode) {
+          arContent.setAttribute('visible', 'false');
+          stopAnimation();
+        }
+      });
+
+      markerCamera.addEventListener('error', (e) => {
+        showError('Marker error: ' + e.detail.message);
+      });
+
+      // Update lines when points are dragged
+      document.addEventListener('componentchanged', (e) => {
+        if (e.detail.name === 'position' && e.target.classList.contains('point')) {
+          updateLines();
+        }
+      });
+
+      video.onerror = () => {
+        showError('Video load error. Check path: ./asset/Hydro_v2.mp4');
+      };
+    });
+
+    function toggleMenu() {
+      controlMenu.classList.toggle('show');
+    }
 
     // Get current positions of all points
     function getPointPositions() {
@@ -156,7 +431,6 @@
       const positions = getPointPositions();
       const lines = document.querySelectorAll('.connecting-line');
       
-      // Update each line
       lines.forEach((line, index) => {
         const nextIndex = (index + 1) % positions.length;
         line.setAttribute('line', {
@@ -196,13 +470,11 @@
       videoEntity.setAttribute('position', `${positions[0].x} ${positions[0].y} ${positions[0].z + 0.01}`);
       
       function animateSequence() {
-        // Move through all points in sequence
         for (let i = 1; i <= positions.length; i++) {
           setTimeout(() => {
             if (i < positions.length) {
               moveToNextPoint();
             } else {
-              // Return to first point after last point
               setTimeout(() => {
                 currentPointIndex = 0;
                 videoEntity.setAttribute('animation', {
@@ -217,10 +489,7 @@
         }
       }
       
-      // Start animation
       animateSequence();
-      
-      // Set interval for continuous loop
       animationInterval = setInterval(animateSequence, (moveDuration + pauseDuration) * positions.length);
     }
 
@@ -233,45 +502,103 @@
       videoEntity.removeAttribute('animation');
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      if (!video) {
-        showError('Video element not found');
-        return;
+    function resetBladeAnimation() {
+      const currentRotation = blades.getAttribute('rotation') || {x: 0, y: 0, z: 0};
+      blades.setAttribute('animation', {
+        property: 'rotation',
+        from: `${currentRotation.x} ${currentRotation.y} ${currentRotation.z}`,
+        to: `${currentRotation.x} ${currentRotation.y + 360} ${currentRotation.z}`,
+        loop: true,
+        dur: bladeAnimationDuration,
+        easing: 'linear',
+        enabled: isMotorRunning && !isMotorStopped
+      });
+    }
+
+    function updateSpeedDisplay() {
+      let speedText;
+      if (bladeAnimationDuration <= 500) {
+        speedText = "Rất nhanh";
+      } else if (bladeAnimationDuration <= 1000) {
+        speedText = "Nhanh";
+      } else if (bladeAnimationDuration <= 1500) {
+        speedText = "Hơi nhanh";
+      } else if (bladeAnimationDuration <= 2000) {
+        speedText = "Bình thường";
+      } else if (bladeAnimationDuration <= 3000) {
+        speedText = "Chậm";
+      } else {
+        speedText = "Rất chậm";
       }
+      speedDisplay.textContent = `Tốc độ: ${speedText} (${(1000/bladeAnimationDuration).toFixed(1)} vòng/giây)`;
+    }
 
-      // Hide everything initially
-      arContent.setAttribute('visible', 'false');
-      
-      // Listen for marker events
-      const marker = document.querySelector('a-marker-camera');
-      
-      marker.addEventListener('markerFound', () => {
-        video.play().catch(e => showError('Video play error: ' + e.message));
-        arContent.setAttribute('visible', 'true');
-        startAnimation();
-      });
+    function increaseBladeSpeed() {
+      bladeAnimationDuration = Math.max(300, bladeAnimationDuration - 500);
+      resetBladeAnimation();
+      updateSpeedDisplay();
+      console.log(`Blade speed increased. Current duration: ${bladeAnimationDuration}ms`);
+    }
 
-      marker.addEventListener('markerLost', () => {
+    function decreaseBladeSpeed() {
+      bladeAnimationDuration = Math.min(5000, bladeAnimationDuration + 500);
+      resetBladeAnimation();
+      updateSpeedDisplay();
+      console.log(`Blade speed decreased. Current duration: ${bladeAnimationDuration}ms`);
+    }
+
+    function toggleMotorState() {
+      isMotorStopped = !isMotorStopped;
+      
+      if (isMotorStopped) {
+        stopStartBtn.innerHTML = '<span class="menu-icon">▶</span> Khởi động';
+        blades.setAttribute('animation', 'enabled', 'false');
+      } else {
+        stopStartBtn.innerHTML = '<span class="menu-icon">⏸</span> Dừng';
+        resetBladeAnimation();
+      }
+    }
+
+    function toggleViewMode() {
+      is3DMode = !is3DMode;
+      
+      if (is3DMode) {
+        // Switch to 3D view
+        modeIndicator.textContent = "3D Mode";
+        toggleModeBtn.innerHTML = '<span class="menu-icon">📱</span> Chế độ AR';
         arContent.setAttribute('visible', 'false');
+        motorContent.setAttribute('visible', 'true');
+        markerCamera.setAttribute('arjs-marker-camera', 'enabled', false);
+        camera3d.setAttribute('camera', 'active', true);
         stopAnimation();
-      });
-
-      // Update lines when points are dragged
-      document.addEventListener('componentchanged', (e) => {
-        if (e.detail.name === 'position' && e.target.classList.contains('point')) {
-          updateLines();
+        
+        if (!isMotorStopped) {
+          resetBladeAnimation();
         }
-      });
-
-      video.onerror = () => {
-        showError('Video load error. Check path: ./asset/Hydro_v2.mp4');
-      };
-    });
+      } else {
+        // Switch back to AR view
+        modeIndicator.textContent = "AR Mode";
+        toggleModeBtn.innerHTML = '<span class="menu-icon">🖥️</span> Chế độ 3D';
+        motorContent.setAttribute('visible', 'false');
+        markerCamera.setAttribute('arjs-marker-camera', 'enabled', true);
+        camera3d.setAttribute('camera', 'active', false);
+        
+        blades.setAttribute('animation', 'enabled', 'false');
+        
+        if (markerFound) {
+          arContent.setAttribute('visible', 'true');
+          startAnimation();
+        }
+      }
+    }
 
     function showError(message) {
       errorDiv.textContent = message;
       errorDiv.style.display = 'block';
       console.error(message);
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
     }
   </script>
 </body>
