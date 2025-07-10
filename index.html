@@ -172,9 +172,9 @@
     loading-screen="enabled: false"
     renderer="logarithmicDepthBuffer: true;">
     
-    <!-- Preload video -->
+    <!-- Preload video (đã bỏ autoplay) -->
     <a-assets>
-      <video id="videoTexture" autoplay loop muted crossorigin="anonymous"
+      <video id="videoTexture" loop muted crossorigin="anonymous"
              src="./asset/Hydro_v2.mp4" webkit-playsinline playsinline></video>
     </a-assets>
 
@@ -199,7 +199,7 @@
       <a-entity light="type: hemisphere; color: #4455aa; groundColor: #882222; intensity: 0.5"></a-entity>
 
       <!-- Hydro Motor Model -->
-      <a-entity id="hydroMotor" position="0 0 0">
+      <a-entity id="hydroMotor" position="0 1.5 5">
         <!-- Water simulation -->
         <a-plane position="0 0.01 0" rotation="-90 0 0" width="3" height="3" color="#1a6fc9" 
                 opacity="0.7" animation="property: rotation; to: -90 0 360; loop: true; dur: 10000; easing: linear"></a-plane>
@@ -287,6 +287,9 @@
         return;
       }
 
+      // Đảm bảo video không tự động phát
+      video.pause();
+      
       // Hide everything initially
       arContent.setAttribute('visible', 'false');
       motorContent.setAttribute('visible', 'false');
@@ -323,6 +326,7 @@
         console.log('Marker lost!');
         markerFound = false;
         if (!is3DMode) {
+          video.pause();
           arContent.setAttribute('visible', 'false');
         }
       });
@@ -410,6 +414,9 @@
         markerCamera.setAttribute('arjs-marker-camera', 'enabled', false);
         camera3d.setAttribute('camera', 'active', true);
         
+        // Pause video when switching to 3D mode
+        video.pause();
+        
         if (!isMotorStopped) {
           resetBladeAnimation();
         }
@@ -421,11 +428,9 @@
         markerCamera.setAttribute('arjs-marker-camera', 'enabled', true);
         camera3d.setAttribute('camera', 'active', false);
         
-        if (markerFound) {
+        if (markerFound && !isMotorStopped) {
           arContent.setAttribute('visible', 'true');
-          if (!isMotorStopped) {
-            video.play().catch(e => showError('Video play error: ' + e.message));
-          }
+          video.play().catch(e => showError('Video play error: ' + e.message));
         }
       }
     }
