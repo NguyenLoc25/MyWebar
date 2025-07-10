@@ -358,6 +358,10 @@
       motorContent.setAttribute('visible', 'false');
       pointsContainer.setAttribute('visible', 'false');
       
+      // Ensure video starts paused and reset
+      video.pause();
+      video.currentTime = 0;
+      
       // Setup buttons
       menuToggle.addEventListener('click', toggleMenu);
       speedUpBtn.addEventListener('click', increaseBladeSpeed);
@@ -393,6 +397,8 @@
         if (!is3DMode) {
           arContent.setAttribute('visible', 'false');
           stopAnimation();
+          video.pause();
+          video.currentTime = 0;
         }
       });
 
@@ -570,6 +576,8 @@
         markerCamera.setAttribute('arjs-marker-camera', 'enabled', false);
         camera3d.setAttribute('camera', 'active', true);
         stopAnimation();
+        video.pause();
+        video.currentTime = 0;
         
         if (!isMotorStopped) {
           resetBladeAnimation();
@@ -583,9 +591,12 @@
         camera3d.setAttribute('camera', 'active', false);
         
         blades.setAttribute('animation', 'enabled', 'false');
+        video.pause();
+        video.currentTime = 0;
         
         if (markerFound) {
           arContent.setAttribute('visible', 'true');
+          video.play().catch(e => showError('Video play error: ' + e.message));
           startAnimation();
         }
       }
