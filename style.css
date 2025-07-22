@@ -105,6 +105,17 @@ body {
   display: inline-block;
   margin-right: 8px;
 }
+
+/* Energy Meter Styles */
+#energyMeter text {
+  font-family: Arial, sans-serif;
+  opacity: 0.9;
+}
+
+#energyLevel {
+  transition: height 0.5s ease, color 0.5s ease;
+}
+
 @media (min-width: 768px) {
   .control-panel {
     right: 20px;
